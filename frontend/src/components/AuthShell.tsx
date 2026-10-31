@@ -16,14 +16,17 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (isPublicPath) return;
+    if (isPublicPath) {
+      setAuthorized(false);
+      setError("");
+      return;
+    }
 
     let active = true;
     const handleExpiredSession = () => {
       clearCurrentUser();
-      router.replace(`/login?next=${encodeURIComponent(pathname)}`);
+      router.replace(`/login?next=${encodeURIComponent(window.location.pathname)}`);
     };
-    setAuthorized(false);
     setError("");
     window.addEventListener("careerpivot-session-expired", handleExpiredSession);
     fetchCurrentUser()
@@ -35,7 +38,7 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
       .catch((cause) => {
         if (!active) return;
         if (cause instanceof ApiError && cause.status === 401) {
-          router.replace(`/login?next=${encodeURIComponent(pathname)}`);
+          router.replace(`/login?next=${encodeURIComponent(window.location.pathname)}`);
           return;
         }
         setError(cause instanceof Error ? cause.message : "Could not verify your session.");
@@ -45,7 +48,7 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
       active = false;
       window.removeEventListener("careerpivot-session-expired", handleExpiredSession);
     };
-  }, [isPublicPath, pathname, router]);
+  }, [isPublicPath, router]);
 
   if (isPublicPath) {
     return <main className="min-h-screen w-full bg-[#090D16] p-4 text-slate-100 sm:p-8">{children}</main>;

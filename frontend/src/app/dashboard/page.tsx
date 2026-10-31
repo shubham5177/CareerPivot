@@ -39,9 +39,11 @@ export default function DashboardPage() {
     setLoading(true);
     setError("");
     try {
-      const sum = await fetchDashboardSummary();
+      const [sum, appStats] = await Promise.all([
+        fetchDashboardSummary(),
+        fetchApplicationAnalytics(),
+      ]);
       setSummary(sum);
-      const appStats = await fetchApplicationAnalytics();
       setAnalytics(appStats);
     } catch (e) {
       console.error("Dashboard fetch error:", e);
