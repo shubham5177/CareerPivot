@@ -7,19 +7,24 @@ Mock Interview Evaluation, Learning Roadmaps, and Application Tracking.
 import os
 import sys
 import json
+import re
 import sqlite3
 import uuid
-from datetime import datetime
+import hashlib
+import hmac
+import secrets
+from datetime import datetime, timedelta, timezone
 from typing import List, Optional
+from urllib.parse import parse_qs, urlencode
 
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Query, Depends
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Depends, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 # Local imports
 from .schemas import (
-    UserProfileCreate, UserProfileResponse,
-    JobRoleSchema, CustomJobRoleRequest, ExtractedSkill, ResumeParseResponse,
+    JobRoleSchema, UserRegistrationRequest, LoginRequest, UserProfileUpdate, UserProfileResponse,
+    CustomJobRoleRequest, ExtractedSkill, ResumeParseResponse,
     ResumeSaveRequest, JobMatchRequest, JobMatchResponse, LearningRoadmapResponse,
     RoadmapTaskSchema, TaskToggleRequest, PortfolioProjectSchema,
     InterviewQuestionSchema, InterviewEvaluateRequest, InterviewEvaluateResponse,
@@ -39,6 +44,37 @@ BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 DB_PATH = os.path.join(BASE_DIR, "careerpivot.db")
 SCHEMA_PATH = os.path.join(BASE_DIR, "database", "schema.sql")
 SEED_PATH = os.path.join(BASE_DIR, "database", "seed.sql")
+ROLE_CATALOG_MIGRATION_PATH = os.path.join(BASE_DIR, "database", "role_catalog_migration.sql")
+DATABASE_READY = False
+MAX_RESUME_UPLOAD_BYTES = 4 * 1024 * 1024
+
+def _connect_database():
+    database_url = os.getenv("TURSO_DATABASE_URL")
+    auth_token = os.getenv("TURSO_AUTH_TOKEN")
+    if bool(database_url) != bool(auth_token):
+        raise RuntimeError("Both TURSO_DATABASE_URL and TURSO_AUTH_TOKEN must be configured together.")
+    if database_url and auth_token:
+        import turso_serverless
+
+        conn = turso_serverless.connect(database_url, auth_token=auth_token)
+        conn.row_factory = turso_serverless.Row
+    else:
+        if os.getenv("VERCEL"):
+            raise RuntimeError(
+                "Configure TURSO_DATABASE_URL and TURSO_AUTH_TOKEN before deploying the API to Vercel."
+            )
+        conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+        conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys = ON;")
+    return conn
+
+def _integrity_error_types():
+    error_types = [sqlite3.IntegrityError]
+    if os.getenv("TURSO_DATABASE_URL") and os.getenv("TURSO_AUTH_TOKEN"):
+        import turso_serverless
+
+        error_types.append(turso_serverless.IntegrityError)
+    return tuple(error_types)
 
 app = FastAPI(
     title="CareerPivot AI API",
@@ -46,19 +82,134 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Enable CORS for Next.js frontend
+FRONTEND_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv(
+        "FRONTEND_ORIGINS",
+        "http://localhost:3000,http://127.0.0.1:3000",
+    ).split(",")
+    if origin.strip()
+]
+SESSION_COOKIE_NAME = "careerpivot_session"
+SESSION_DURATION = timedelta(days=14)
+PASSWORD_HASH_ITERATIONS = 600_000
+SECURE_SESSION_COOKIE = (
+    bool(os.getenv("VERCEL"))
+    or os.getenv("SESSION_COOKIE_SECURE", "").lower() == "true"
+)
+PUBLIC_API_PATHS = {
+    "/api/health",
+    "/api/roles",
+    "/api/users/register",
+    "/api/auth/login",
+    "/api/auth/logout",
+}
+
+def _password_hash(password: str, salt: Optional[bytes] = None) -> str:
+    salt = salt or secrets.token_bytes(16)
+    digest = hashlib.pbkdf2_hmac(
+        "sha256", password.encode("utf-8"), salt, PASSWORD_HASH_ITERATIONS
+    )
+    return f"pbkdf2_sha256${PASSWORD_HASH_ITERATIONS}${salt.hex()}${digest.hex()}"
+
+def _password_matches(password: str, encoded_hash: str) -> bool:
+    try:
+        algorithm, iterations, salt_hex, digest_hex = encoded_hash.split("$")
+        if algorithm != "pbkdf2_sha256":
+            return False
+        candidate = hashlib.pbkdf2_hmac(
+            "sha256", password.encode("utf-8"), bytes.fromhex(salt_hex), int(iterations)
+        )
+        return hmac.compare_digest(candidate.hex(), digest_hex)
+    except (ValueError, TypeError):
+        return False
+
+def _issue_session(db: sqlite3.Connection, user_id: str, response: Response) -> None:
+    token = secrets.token_urlsafe(32)
+    expires_at = datetime.now(timezone.utc) + SESSION_DURATION
+    db.execute(
+        "INSERT INTO auth_sessions (token_hash, user_id, expires_at) VALUES (?, ?, ?)",
+        (
+            hashlib.sha256(token.encode("utf-8")).hexdigest(),
+            user_id,
+            expires_at.isoformat(),
+        ),
+    )
+    response.set_cookie(
+        key=SESSION_COOKIE_NAME,
+        value=token,
+        httponly=True,
+        secure=SECURE_SESSION_COOKIE,
+        samesite="lax",
+        max_age=int(SESSION_DURATION.total_seconds()),
+        path="/api",
+    )
+
+@app.middleware("http")
+async def require_authenticated_session(request: Request, call_next):
+    path = request.url.path
+    origin = request.headers.get("origin")
+    if (
+        request.method not in {"GET", "HEAD", "OPTIONS"}
+        and origin
+        and origin not in FRONTEND_ORIGINS
+    ):
+        return JSONResponse(status_code=403, content={"detail": "Request origin is not allowed."})
+    if (
+        not path.startswith("/api/")
+        or path in PUBLIC_API_PATHS
+        or request.method == "OPTIONS"
+    ):
+        return await call_next(request)
+
+    raw_token = request.cookies.get(SESSION_COOKIE_NAME)
+    if not raw_token:
+        return JSONResponse(status_code=401, content={"detail": "Sign in to continue."})
+
+    token_hash = hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
+    conn = _connect_database()
+    try:
+        row = conn.execute(
+            "SELECT user_id, expires_at FROM auth_sessions WHERE token_hash = ?",
+            (token_hash,),
+        ).fetchone()
+        if row and datetime.fromisoformat(row[1]) <= datetime.now(timezone.utc):
+            conn.execute("DELETE FROM auth_sessions WHERE token_hash = ?", (token_hash,))
+            conn.commit()
+            row = None
+    finally:
+        conn.close()
+
+    if not row:
+        return JSONResponse(status_code=401, content={"detail": "Your session has expired. Sign in again."})
+
+    user_id = row[0]
+    request.state.user_id = user_id
+
+    query = parse_qs(request.scope["query_string"].decode("latin-1"), keep_blank_values=True)
+    requested_users = query.get("user_id", [])
+    if requested_users and any(requested_user != user_id for requested_user in requested_users):
+        return JSONResponse(status_code=403, content={"detail": "You cannot access another user's data."})
+    if not requested_users and request.method == "GET":
+        query["user_id"] = [user_id]
+        request.scope["query_string"] = urlencode(query, doseq=True).encode("latin-1")
+
+    profile_match = re.fullmatch(r"/api/users/([^/]+)/profile", path)
+    if profile_match and profile_match.group(1) != user_id:
+        return JSONResponse(status_code=403, content={"detail": "You cannot access another user's profile."})
+
+    return await call_next(request)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=FRONTEND_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 def get_db():
-    conn = sqlite3.connect(DB_PATH, check_same_thread=False)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA foreign_keys = ON;")
+    conn = _connect_database()
     try:
         yield conn
     finally:
@@ -66,15 +217,24 @@ def get_db():
 
 def init_database():
     """Initializes SQLite database with schema and seed data if not present."""
-    print(f"[Database] Checking database at {DB_PATH}")
-    db_exists = os.path.exists(DB_PATH)
-    conn = sqlite3.connect(DB_PATH)
+    global DATABASE_READY
+    remote_database = bool(os.getenv("TURSO_DATABASE_URL"))
+    print(
+        "[Database] Initializing Turso database."
+        if remote_database
+        else f"[Database] Checking database at {DB_PATH}"
+    )
+    conn = _connect_database()
     cursor = conn.cursor()
 
     if os.path.exists(SCHEMA_PATH):
         with open(SCHEMA_PATH, "r", encoding="utf-8") as f:
             cursor.executescript(f.read())
         print("[Database] Schema applied.")
+
+    resume_columns = {row[1] for row in cursor.execute("PRAGMA table_info(resumes);")}
+    if "certifications_json" not in resume_columns:
+        cursor.execute("ALTER TABLE resumes ADD COLUMN certifications_json TEXT;")
 
     # Check if job_roles has records; if not, apply seed.sql
     cursor.execute("SELECT COUNT(*) FROM job_roles;")
@@ -83,8 +243,13 @@ def init_database():
         with open(SEED_PATH, "r", encoding="utf-8") as f:
             cursor.executescript(f.read())
         print(f"[Database] Seed data applied successfully.")
+
+    if os.path.exists(ROLE_CATALOG_MIGRATION_PATH):
+        with open(ROLE_CATALOG_MIGRATION_PATH, "r", encoding="utf-8") as f:
+            cursor.executescript(f.read())
     conn.commit()
     conn.close()
+    DATABASE_READY = True
 
 @app.on_event("startup")
 def startup_event():
@@ -104,123 +269,160 @@ def health_check():
             "model_2_job_matcher": job_matcher.vectorizer is not None,
             "model_3_interview_evaluator": interview_evaluator.model is not None
         },
-        "database": os.path.exists(DB_PATH)
+        "database": DATABASE_READY
     }
 
 # -------------------------------------------------------------------------
-# User Registration & Profile Endpoints
+# User Profile Endpoints
 # -------------------------------------------------------------------------
-@app.get("/api/users/profile", response_model=UserProfileResponse)
-def get_user_profile(user_id: str = "usr-demo-01", db: sqlite3.Connection = Depends(get_db)):
-    cursor = db.cursor()
-    cursor.execute("""
-        SELECT u.id, u.name, u.email, u.current_title, u.years_of_experience, u.target_role_id, u.bio, u.created_at,
-               r.title as target_role_title
-        FROM users u
-        LEFT JOIN job_roles r ON u.target_role_id = r.id
-        WHERE u.id = ?;
-    """, (user_id,))
-    row = cursor.fetchone()
-    if not row:
-        # Create a default profile if not exists
-        return UserProfileResponse(
-            id=user_id,
-            name="Alex Rivera",
-            email="alex.rivera@example.com",
-            current_title="Junior Software Developer",
-            years_of_experience=1.5,
-            target_role_id="role-fullstack",
-            target_role_title="Full Stack Developer",
-            education="B.S. in Computer Science",
-            current_skills=["JavaScript", "React", "HTML5 & CSS3", "Tailwind CSS", "RESTful APIs", "SQL"],
-            bio="Passionate junior developer transitioning into full-stack web engineering."
+def _profile_from_row(row: sqlite3.Row) -> dict:
+    profile = dict(row)
+    for field in ("education", "current_skills", "experience", "career_interests"):
+        raw_value = profile.pop(f"{field}_json", None)
+        profile[field] = json.loads(raw_value) if raw_value else []
+    return profile
+
+@app.post("/api/users/register", response_model=UserProfileResponse, status_code=201)
+def register_user(
+    req: UserRegistrationRequest,
+    response: Response,
+    db: sqlite3.Connection = Depends(get_db),
+):
+    email = req.email.strip().lower()
+    if not re.fullmatch(r"[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+", email):
+        raise HTTPException(status_code=422, detail="Enter a valid email address.")
+    if req.target_role_id:
+        role = db.execute("SELECT 1 FROM job_roles WHERE id = ?", (req.target_role_id,)).fetchone()
+        if not role:
+            raise HTTPException(status_code=422, detail="The selected target role does not exist.")
+
+    user_id = f"usr-{uuid.uuid4().hex[:12]}"
+    try:
+        db.execute(
+            """INSERT INTO users (id, name, email, current_title, years_of_experience, target_role_id, bio)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (
+                user_id, req.name.strip(), email, req.current_title.strip(),
+                req.years_of_experience, req.target_role_id, req.bio,
+            ),
         )
+        db.execute(
+            """INSERT INTO user_profiles
+               (user_id, education_json, current_skills_json, experience_json, career_interests_json)
+               VALUES (?, ?, ?, ?, ?)""",
+            (
+                user_id,
+                json.dumps(req.education),
+                json.dumps(req.current_skills),
+                json.dumps(req.experience),
+                json.dumps(req.career_interests),
+            ),
+        )
+        db.execute(
+            "INSERT INTO auth_accounts (user_id, password_hash) VALUES (?, ?)",
+            (user_id, _password_hash(req.password)),
+        )
+        _issue_session(db, user_id, response)
+        db.commit()
+    except _integrity_error_types() as exc:
+        db.rollback()
+        if "users.email" in str(exc):
+            raise HTTPException(status_code=409, detail="An account with this email already exists.") from exc
+        raise HTTPException(status_code=422, detail="Could not create the profile with the supplied details.") from exc
 
-    # Fetch skills from latest resume
-    cursor.execute("""
-        SELECT extracted_skills_json, education_json FROM resumes
-        WHERE user_id = ? ORDER BY parsed_at DESC LIMIT 1;
-    """, (user_id,))
-    res_row = cursor.fetchone()
-    current_skills = []
-    edu_str = ""
-    if res_row:
-        if res_row["extracted_skills_json"]:
-            try:
-                current_skills = json.loads(res_row["extracted_skills_json"])
-            except Exception:
-                pass
-        if res_row["education_json"]:
-            try:
-                edu_arr = json.loads(res_row["education_json"])
-                if edu_arr:
-                    edu_str = edu_arr[0].get("degree", "")
-            except Exception:
-                pass
+    return get_user_profile(user_id, db)
 
-    return UserProfileResponse(
-        id=row["id"],
-        name=row["name"],
-        email=row["email"],
-        current_title=row["current_title"] or "Aspiring Developer",
-        years_of_experience=row["years_of_experience"] or 0.0,
-        target_role_id=row["target_role_id"],
-        target_role_title=row["target_role_title"] or "Full Stack Developer",
-        education=edu_str or "Computer Science / STEM",
-        current_skills=current_skills if current_skills else ["JavaScript", "React", "SQL"],
-        bio=row["bio"] or "",
-        created_at=row["created_at"]
+@app.post("/api/auth/login", response_model=UserProfileResponse)
+def login_user(req: LoginRequest, response: Response, db: sqlite3.Connection = Depends(get_db)):
+    email = req.email.strip().lower()
+    row = db.execute(
+        """SELECT u.id, a.password_hash
+           FROM users u JOIN auth_accounts a ON a.user_id = u.id
+           WHERE LOWER(u.email) = ?""",
+        (email,),
+    ).fetchone()
+    if not row or not _password_matches(req.password, row["password_hash"]):
+        raise HTTPException(status_code=401, detail="Invalid email or password.")
+    _issue_session(db, row["id"], response)
+    db.commit()
+    return get_user_profile(row["id"], db)
+
+@app.get("/api/auth/me", response_model=UserProfileResponse)
+def current_authenticated_user(request: Request, db: sqlite3.Connection = Depends(get_db)):
+    return get_user_profile(request.state.user_id, db)
+
+@app.post("/api/auth/logout")
+def logout_user(request: Request, response: Response, db: sqlite3.Connection = Depends(get_db)):
+    token = request.cookies.get(SESSION_COOKIE_NAME)
+    if token:
+        token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
+        db.execute("DELETE FROM auth_sessions WHERE token_hash = ?", (token_hash,))
+        db.commit()
+    response.delete_cookie(
+        key=SESSION_COOKIE_NAME,
+        path="/api",
+        httponly=True,
+        secure=SECURE_SESSION_COOKIE,
+        samesite="lax",
     )
+    return {"status": "signed_out"}
 
-@app.post("/api/users/profile", response_model=UserProfileResponse)
-def create_or_update_profile(req: UserProfileCreate, user_id: str = "usr-demo-01", db: sqlite3.Connection = Depends(get_db)):
-    cursor = db.cursor()
-    cursor.execute("SELECT id FROM users WHERE id = ?", (user_id,))
-    exists = cursor.fetchone()
+@app.get("/api/users/{user_id}/profile", response_model=UserProfileResponse)
+def get_user_profile(user_id: str, db: sqlite3.Connection = Depends(get_db)):
+    row = db.execute(
+        """SELECT u.id, u.name, u.email, u.current_title, u.years_of_experience,
+                  u.target_role_id, r.title AS target_role_title, u.bio,
+                  p.education_json, p.current_skills_json, p.experience_json, p.career_interests_json
+           FROM users u
+           LEFT JOIN job_roles r ON r.id = u.target_role_id
+           LEFT JOIN user_profiles p ON p.user_id = u.id
+           WHERE u.id = ?""",
+        (user_id,),
+    ).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="User profile not found.")
+    return _profile_from_row(row)
 
-    if exists:
-        cursor.execute("""
-            UPDATE users
-            SET name = ?, email = ?, current_title = ?, years_of_experience = ?, target_role_id = ?, bio = ?, updated_at = CURRENT_TIMESTAMP
-            WHERE id = ?;
-        """, (req.name, req.email, req.current_title, req.years_of_experience, req.target_role_id, req.bio, user_id))
-    else:
-        cursor.execute("""
-            INSERT INTO users (id, name, email, current_title, years_of_experience, target_role_id, bio)
-            VALUES (?, ?, ?, ?, ?, ?, ?);
-        """, (user_id, req.name, req.email, req.current_title, req.years_of_experience, req.target_role_id, req.bio))
+@app.put("/api/users/{user_id}/profile", response_model=UserProfileResponse)
+def update_user_profile(
+    user_id: str,
+    req: UserProfileUpdate,
+    db: sqlite3.Connection = Depends(get_db),
+):
+    if not db.execute("SELECT 1 FROM users WHERE id = ?", (user_id,)).fetchone():
+        raise HTTPException(status_code=404, detail="User profile not found.")
 
-    # Also sync resume skills and education if provided
-    if req.current_skills or req.education:
-        edu_list = [{"degree": req.education, "institution": "Self-Directed / University", "year": "Recent"}] if req.education else []
-        cursor.execute("""
-            SELECT id FROM resumes WHERE user_id = ? ORDER BY parsed_at DESC LIMIT 1;
-        """, (user_id,))
-        res_exists = cursor.fetchone()
-        if res_exists:
-            cursor.execute("""
-                UPDATE resumes
-                SET extracted_skills_json = ?, education_json = ?
-                WHERE id = ?;
-            """, (json.dumps(req.current_skills or []), json.dumps(edu_list), res_exists[0]))
-        else:
-            res_id = f"res-{uuid.uuid4().hex[:8]}"
-            cursor.execute("""
-                INSERT INTO resumes (id, user_id, filename, file_type, raw_text, clean_text, education_json, experience_json, projects_json, extracted_skills_json)
-                VALUES (?, ?, 'profile_resume.txt', 'text', 'Profile Created Resume', 'Profile Created Resume', ?, '[]', '[]', ?);
-            """, (res_id, user_id, json.dumps(edu_list), json.dumps(req.current_skills or [])))
+    changes = req.model_dump(exclude_unset=True)
+    if "target_role_id" in changes and changes["target_role_id"] is not None:
+        if not db.execute("SELECT 1 FROM job_roles WHERE id = ?", (changes["target_role_id"],)).fetchone():
+            raise HTTPException(status_code=422, detail="The selected target role does not exist.")
 
+    user_fields = {
+        key: changes.pop(key)
+        for key in ("current_title", "years_of_experience", "target_role_id", "bio")
+        if key in changes
+    }
+    profile_fields = {
+        key: changes.pop(key)
+        for key in ("education", "current_skills", "experience", "career_interests")
+        if key in changes
+    }
+    if user_fields:
+        assignments = ", ".join(f"{key} = ?" for key in user_fields)
+        db.execute(
+            f"UPDATE users SET {assignments}, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+            (*user_fields.values(), user_id),
+        )
+    if profile_fields:
+        db.execute("INSERT OR IGNORE INTO user_profiles (user_id) VALUES (?)", (user_id,))
+        assignments = ", ".join(f"{key}_json = ?" for key in profile_fields)
+        values = [json.dumps(value) for value in profile_fields.values()]
+        db.execute(
+            f"UPDATE user_profiles SET {assignments}, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?",
+            (*values, user_id),
+        )
     db.commit()
-
-    # Return updated profile
-    return get_user_profile(user_id=user_id, db=db)
-
-@app.put("/api/users/target-role")
-def update_target_role(role_id: str, user_id: str = "usr-demo-01", db: sqlite3.Connection = Depends(get_db)):
-    cursor = db.cursor()
-    cursor.execute("UPDATE users SET target_role_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?;", (role_id, user_id))
-    db.commit()
-    return {"status": "updated", "target_role_id": role_id}
+    return get_user_profile(user_id, db)
 
 # -------------------------------------------------------------------------
 # Job Roles Endpoints
@@ -302,7 +504,12 @@ async def parse_resume_upload(
 
     if file:
         filename = file.filename
-        file_bytes = await file.read()
+        file_bytes = await file.read(MAX_RESUME_UPLOAD_BYTES + 1)
+        if len(file_bytes) > MAX_RESUME_UPLOAD_BYTES:
+            raise HTTPException(
+                status_code=413,
+                detail="Resume uploads must be 4 MB or smaller.",
+            )
         if filename.lower().endswith(".pdf"):
             file_type = "pdf"
             text = extract_text_from_pdf(file_bytes)
@@ -334,19 +541,20 @@ async def parse_resume_upload(
         "education": sections["education"],
         "experience": sections["experience"],
         "projects": sections["projects"],
+        "certifications": sections["certifications"],
         "extracted_skills": extracted
     }
 
 @app.post("/api/resume/save")
-def save_resume(req: ResumeSaveRequest, db: sqlite3.Connection = Depends(get_db)):
+def save_resume(req: ResumeSaveRequest, request: Request, db: sqlite3.Connection = Depends(get_db)):
     resume_id = f"res-{uuid.uuid4().hex[:8]}"
     cursor = db.cursor()
     cursor.execute("""
-        INSERT INTO resumes (id, user_id, filename, file_type, raw_text, clean_text, education_json, experience_json, projects_json, extracted_skills_json)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO resumes (id, user_id, filename, file_type, raw_text, clean_text, education_json, experience_json, projects_json, certifications_json, extracted_skills_json)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         resume_id,
-        req.user_id,
+        request.state.user_id,
         req.filename,
         req.file_type,
         req.raw_text,
@@ -354,6 +562,7 @@ def save_resume(req: ResumeSaveRequest, db: sqlite3.Connection = Depends(get_db)
         json.dumps(req.education),
         json.dumps(req.experience),
         json.dumps(req.projects),
+        json.dumps(req.certifications),
         json.dumps(req.extracted_skills)
     ))
     db.commit()
@@ -363,7 +572,7 @@ def save_resume(req: ResumeSaveRequest, db: sqlite3.Connection = Depends(get_db)
 def get_latest_resume(user_id: str = "usr-demo-01", db: sqlite3.Connection = Depends(get_db)):
     cursor = db.cursor()
     cursor.execute("""
-        SELECT id, filename, file_type, raw_text, clean_text, education_json, experience_json, projects_json, extracted_skills_json, parsed_at
+        SELECT id, filename, file_type, raw_text, clean_text, education_json, experience_json, projects_json, certifications_json, extracted_skills_json, parsed_at
         FROM resumes
         WHERE user_id = ?
         ORDER BY parsed_at DESC LIMIT 1;
@@ -380,6 +589,7 @@ def get_latest_resume(user_id: str = "usr-demo-01", db: sqlite3.Connection = Dep
         "education": json.loads(row["education_json"]) if row["education_json"] else [],
         "experience": json.loads(row["experience_json"]) if row["experience_json"] else [],
         "projects": json.loads(row["projects_json"]) if row["projects_json"] else [],
+        "certifications": json.loads(row["certifications_json"]) if row["certifications_json"] else [],
         "extracted_skills": json.loads(row["extracted_skills_json"]) if row["extracted_skills_json"] else [],
         "parsed_at": row["parsed_at"]
     }
@@ -388,7 +598,7 @@ def get_latest_resume(user_id: str = "usr-demo-01", db: sqlite3.Connection = Dep
 # Job Matching & Skill Gap Analysis Endpoints (Model 2)
 # -------------------------------------------------------------------------
 @app.post("/api/match/evaluate", response_model=JobMatchResponse)
-def evaluate_job_match(req: JobMatchRequest, db: sqlite3.Connection = Depends(get_db)):
+def evaluate_job_match(req: JobMatchRequest, request: Request, db: sqlite3.Connection = Depends(get_db)):
     cursor = db.cursor()
 
     role_info = {}
@@ -432,14 +642,14 @@ def evaluate_job_match(req: JobMatchRequest, db: sqlite3.Connection = Depends(ge
     )
 
     # Persist skill gap result if linked to user
-    if req.user_id and req.job_role_id:
+    if req.job_role_id:
         gap_id = f"gap-{uuid.uuid4().hex[:8]}"
         cursor.execute("""
             INSERT INTO skill_gaps (id, user_id, job_role_id, match_score, matched_skills_json, missing_skills_json, suitability_explanation)
             VALUES (?, ?, ?, ?, ?, ?, ?)
         """, (
             gap_id,
-            req.user_id,
+            request.state.user_id,
             req.job_role_id,
             result["match_score"],
             json.dumps(result["matched_skills"]),
@@ -473,6 +683,14 @@ def get_user_roadmap(
         cursor.execute("SELECT title FROM job_roles WHERE id = ?", (target_role,))
         r_title = cursor.fetchone()
         role_title_str = r_title[0] if r_title else "Software Engineering"
+        gap_row = cursor.execute(
+            """SELECT missing_skills_json FROM skill_gaps
+               WHERE user_id = ? AND job_role_id = ?
+               ORDER BY analyzed_at DESC LIMIT 1""",
+            (user_id, target_role),
+        ).fetchone()
+        priority_skills = json.loads(gap_row["missing_skills_json"]) if gap_row and gap_row["missing_skills_json"] else []
+        focus_summary = f" Prioritize these identified gaps: {', '.join(priority_skills[:4])}." if priority_skills else ""
 
         roadmap_id = f"rdm-{uuid.uuid4().hex[:8]}"
         cursor.execute("""
@@ -481,7 +699,7 @@ def get_user_roadmap(
         """, (
             roadmap_id, user_id, target_role,
             f"8-Week {role_title_str} Readiness Roadmap",
-            f"Personalized weekly mastery path covering skill gaps for {role_title_str}."
+            f"Personalized weekly mastery path for {role_title_str}.{focus_summary}"
         ))
 
         # Seed standard weekly milestones
@@ -497,6 +715,11 @@ def get_user_roadmap(
         ]
 
         for w_num, w_title, w_topics, w_acts, w_mile in weeks_data:
+            if priority_skills and w_num <= min(len(priority_skills), 4):
+                focus_skill = priority_skills[w_num - 1]
+                w_title = f"{w_title} - Focus: {focus_skill}"
+                w_topics = [f"Applied practice: {focus_skill}", *w_topics]
+                w_acts = [f"Build a small practical exercise using {focus_skill}", *w_acts]
             cursor.execute("""
                 INSERT INTO roadmap_tasks (id, roadmap_id, week_number, title, description, topics_json, practice_activities_json, project_milestone, recommended_resources_json, is_completed)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
@@ -558,10 +781,16 @@ def get_user_roadmap(
 def toggle_roadmap_task(
     task_id: str,
     req: TaskToggleRequest,
+    request: Request,
     db: sqlite3.Connection = Depends(get_db)
 ):
     cursor = db.cursor()
-    cursor.execute("SELECT roadmap_id, week_number FROM roadmap_tasks WHERE id = ?", (task_id,))
+    cursor.execute(
+        """SELECT t.roadmap_id, t.week_number FROM roadmap_tasks t
+           JOIN learning_roadmaps r ON r.id = t.roadmap_id
+           WHERE t.id = ? AND r.user_id = ?""",
+        (task_id, request.state.user_id),
+    )
     task = cursor.fetchone()
     if not task:
         raise HTTPException(status_code=404, detail="Task not found.")
@@ -602,6 +831,7 @@ def toggle_roadmap_task(
 def get_portfolio_projects(
     role_id: Optional[str] = None,
     difficulty: Optional[str] = None,
+    user_id: Optional[str] = None,
     db: sqlite3.Connection = Depends(get_db)
 ):
     cursor = db.cursor()
@@ -632,6 +862,27 @@ def get_portfolio_projects(
             github_starter_url=r["github_starter_url"],
             status=r["status"]
         ))
+    if user_id and role_id:
+        gap_row = cursor.execute(
+            """SELECT missing_skills_json FROM skill_gaps
+               WHERE user_id = ? AND job_role_id = ?
+               ORDER BY analyzed_at DESC LIMIT 1""",
+            (user_id, role_id),
+        ).fetchone()
+        missing_skills = json.loads(gap_row["missing_skills_json"]) if gap_row and gap_row["missing_skills_json"] else []
+        if missing_skills:
+            def project_gap_score(project: PortfolioProjectSchema) -> int:
+                project_terms = [
+                    term.lower()
+                    for term in project.required_technologies + project.skills_gained
+                ]
+                return sum(
+                    1
+                    for skill in missing_skills
+                    if any(skill.lower() in term or term in skill.lower() for term in project_terms)
+                )
+
+            projects.sort(key=lambda project: (-project_gap_score(project), project.title))
     return projects
 
 # -------------------------------------------------------------------------
@@ -749,9 +1000,33 @@ INTERVIEW_QUESTIONS_BANK = {
 @app.get("/api/interview/questions", response_model=List[InterviewQuestionSchema])
 def get_interview_questions(
     role_id: str = "role-fullstack",
-    difficulty: Optional[str] = None
+    difficulty: Optional[str] = None,
+    db: sqlite3.Connection = Depends(get_db),
 ):
-    questions = INTERVIEW_QUESTIONS_BANK.get(role_id, INTERVIEW_QUESTIONS_BANK["role-fullstack"])
+    questions = INTERVIEW_QUESTIONS_BANK.get(role_id)
+    if questions is None:
+        role = db.execute("SELECT title FROM job_roles WHERE id = ?", (role_id,)).fetchone()
+        if not role:
+            raise HTTPException(status_code=404, detail="Target role not found.")
+        skills = [
+            row["name"]
+            for row in db.execute(
+                """SELECT s.name FROM skill_requirements sr
+                   JOIN skills s ON s.id = sr.skill_id
+                   WHERE sr.job_role_id = ?
+                   ORDER BY sr.importance = 'Essential' DESC, s.name""",
+                (role_id,),
+            ).fetchall()
+        ]
+        concepts = skills[:5] or ["role responsibilities", "problem solving", "communication"]
+        questions = [{
+            "id": f"q-{role_id}-general",
+            "question_text": f"What approach would you take to solve a challenging problem as a {role['title']}, and how would you apply {', '.join(concepts[:3])}?",
+            "category": f"{role['title']} Fundamentals",
+            "difficulty": "Mid-level",
+            "expected_concepts": concepts,
+            "hints": "Explain the problem, your technical choices, and how you would verify the outcome.",
+        }]
     if difficulty:
         filtered = [q for q in questions if q["difficulty"].lower() == difficulty.lower()]
         return filtered if filtered else questions
@@ -760,6 +1035,7 @@ def get_interview_questions(
 @app.post("/api/interview/evaluate", response_model=InterviewEvaluateResponse)
 def evaluate_interview_answer(
     req: InterviewEvaluateRequest,
+    request: Request,
     db: sqlite3.Connection = Depends(get_db)
 ):
     # Run Model 3 evaluation
@@ -779,7 +1055,7 @@ def evaluate_interview_answer(
         INSERT INTO interview_sessions (id, user_id, job_role_id, difficulty, overall_score, feedback_summary)
         VALUES (?, ?, ?, ?, ?, ?)
     """, (
-        session_id, req.user_id, req.job_role_id, req.difficulty,
+        session_id, request.state.user_id, req.job_role_id, req.difficulty,
         eval_result["overall_answer_score"], eval_result["rubric_feedback"]
     ))
 
@@ -831,7 +1107,15 @@ def get_interview_history(
         r = dict(row)
         r["covered_concepts"] = json.loads(r["covered_concepts_json"]) if r["covered_concepts_json"] else []
         r["missing_concepts"] = json.loads(r["missing_concepts_json"]) if r["missing_concepts_json"] else []
-        r["improvement_suggestions"] = json.loads(r["improvement_suggestions"]) if r["improvement_suggestions"] else []
+        raw_suggestions = r["improvement_suggestions"]
+        if raw_suggestions:
+            try:
+                suggestions = json.loads(raw_suggestions)
+            except json.JSONDecodeError:
+                suggestions = [raw_suggestions]
+            r["improvement_suggestions"] = suggestions if isinstance(suggestions, list) else [suggestions]
+        else:
+            r["improvement_suggestions"] = []
         history.append(r)
     return history
 
@@ -863,6 +1147,7 @@ def get_job_applications(
 @app.post("/api/applications")
 def create_job_application(
     req: JobApplicationCreate,
+    request: Request,
     db: sqlite3.Connection = Depends(get_db)
 ):
     app_id = f"app-{uuid.uuid4().hex[:8]}"
@@ -871,7 +1156,7 @@ def create_job_application(
         INSERT INTO job_applications (id, user_id, company, job_title, target_role_id, location, salary_range, job_description, status, application_date, interview_date, outcome_notes, match_score)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
-        app_id, req.user_id, req.company, req.job_title, req.target_role_id,
+        app_id, request.state.user_id, req.company, req.job_title, req.target_role_id,
         req.location, req.salary_range, req.job_description, req.status,
         req.application_date, req.interview_date, req.outcome_notes, req.match_score
     ))
@@ -882,9 +1167,15 @@ def create_job_application(
 def update_job_application(
     app_id: str,
     req: JobApplicationUpdate,
+    request: Request,
     db: sqlite3.Connection = Depends(get_db)
 ):
     cursor = db.cursor()
+    if not cursor.execute(
+        "SELECT 1 FROM job_applications WHERE id = ? AND user_id = ?",
+        (app_id, request.state.user_id),
+    ).fetchone():
+        raise HTTPException(status_code=404, detail="Application not found.")
     fields = []
     values = []
 
@@ -911,15 +1202,27 @@ def update_job_application(
         return {"status": "no_changes"}
 
     fields.append("updated_at = CURRENT_TIMESTAMP")
-    values.append(app_id)
-    cursor.execute(f"UPDATE job_applications SET {', '.join(fields)} WHERE id = ?", values)
+    values.extend((app_id, request.state.user_id))
+    cursor.execute(
+        f"UPDATE job_applications SET {', '.join(fields)} WHERE id = ? AND user_id = ?",
+        values,
+    )
     db.commit()
     return {"status": "updated", "application_id": app_id}
 
 @app.delete("/api/applications/{app_id}")
-def delete_job_application(app_id: str, db: sqlite3.Connection = Depends(get_db)):
+def delete_job_application(
+    app_id: str,
+    request: Request,
+    db: sqlite3.Connection = Depends(get_db),
+):
     cursor = db.cursor()
-    cursor.execute("DELETE FROM job_applications WHERE id = ?", (app_id,))
+    cursor.execute(
+        "DELETE FROM job_applications WHERE id = ? AND user_id = ?",
+        (app_id, request.state.user_id),
+    )
+    if cursor.rowcount == 0:
+        raise HTTPException(status_code=404, detail="Application not found.")
     db.commit()
     return {"status": "deleted", "application_id": app_id}
 
@@ -992,49 +1295,64 @@ def get_dashboard_summary(
     # User info
     cursor.execute("SELECT u.name, u.current_title, r.title as target_title, u.target_role_id FROM users u LEFT JOIN job_roles r ON u.target_role_id = r.id WHERE u.id = ?", (user_id,))
     u_row = cursor.fetchone()
-    user_name = u_row["name"] if u_row else "Alex Rivera"
-    curr_title = u_row["current_title"] if u_row else "Software Developer"
+    user_name = u_row["name"] if u_row else "Career Seeker"
+    curr_title = (u_row["current_title"] if u_row else None) or "Not added yet"
     target_role_title = u_row["target_title"] if u_row and u_row["target_title"] else "Full Stack Developer"
-    target_role_id = u_row["target_role_id"] if u_row else "role-fullstack"
+    target_role_id = u_row["target_role_id"] if u_row and u_row["target_role_id"] else "role-fullstack"
 
     # Latest resume & match score
     cursor.execute("SELECT extracted_skills_json FROM resumes WHERE user_id = ? ORDER BY parsed_at DESC LIMIT 1;", (user_id,))
     res_row = cursor.fetchone()
-    detected_skills = json.loads(res_row["extracted_skills_json"]) if res_row and res_row["extracted_skills_json"] else []
+    if res_row and res_row["extracted_skills_json"]:
+        detected_skills = json.loads(res_row["extracted_skills_json"])
+    else:
+        profile_row = cursor.execute(
+            "SELECT current_skills_json FROM user_profiles WHERE user_id = ?", (user_id,)
+        ).fetchone()
+        detected_skills = json.loads(profile_row["current_skills_json"]) if profile_row and profile_row["current_skills_json"] else []
 
     cursor.execute("SELECT match_score, missing_skills_json FROM skill_gaps WHERE user_id = ? ORDER BY analyzed_at DESC LIMIT 1;", (user_id,))
     gap_row = cursor.fetchone()
-    match_score = gap_row["match_score"] if gap_row else 68.5
+    match_score = gap_row["match_score"] if gap_row else 0.0
     missing_skills = json.loads(gap_row["missing_skills_json"]) if gap_row and gap_row["missing_skills_json"] else []
 
     # Roadmap progress
     cursor.execute("SELECT id, total_weeks, progress_percentage FROM learning_roadmaps WHERE user_id = ? ORDER BY created_at DESC LIMIT 1;", (user_id,))
     rdm_row = cursor.fetchone()
-    rdm_pct = rdm_row["progress_percentage"] if rdm_row else 37.5
-    total_weeks = rdm_row["total_weeks"] if rdm_row else 8
+    rdm_pct = rdm_row["progress_percentage"] if rdm_row else 0.0
+    total_weeks = rdm_row["total_weeks"] if rdm_row else 0
 
     cursor.execute("SELECT COUNT(*) FROM roadmap_tasks WHERE roadmap_id = ? AND is_completed = 1;", (rdm_row["id"] if rdm_row else "",))
-    comp_weeks = cursor.fetchone()[0] if rdm_row else 3
+    comp_weeks = cursor.fetchone()[0] if rdm_row else 0
 
     # Interview performance
     cursor.execute("SELECT AVG(overall_score), COUNT(*) FROM interview_sessions WHERE user_id = ?;", (user_id,))
     avg_score, iv_count = cursor.fetchone()
-    avg_score = round(float(avg_score), 1) if avg_score else 84.5
-    iv_count = iv_count or 1
+    avg_score = round(float(avg_score), 1) if avg_score is not None else 0.0
 
     # Applications
     cursor.execute("SELECT COUNT(*) FROM job_applications WHERE user_id = ?;", (user_id,))
-    total_apps = cursor.fetchone()[0] or 5
+    total_apps = cursor.fetchone()[0]
     cursor.execute("SELECT COUNT(*) FROM job_applications WHERE user_id = ? AND status IN ('Applied', 'Screening', 'Technical Interview', 'Final Round');", (user_id,))
-    active_apps = cursor.fetchone()[0] or 4
+    active_apps = cursor.fetchone()[0]
 
     # Personalized next steps
-    next_steps = [
-        {"title": "Complete Week 4 Roadmap Module", "description": "Finish backend API authentication and rate limiting tasks.", "action_url": "/roadmap", "type": "roadmap"},
-        {"title": "Bridge Key Essential Skill Gap", "description": f"Master {missing_skills[0] if missing_skills else 'TypeScript'} to boost match score beyond 80%.", "action_url": "/skill-gap", "type": "skill"},
-        {"title": "Take a Mock Interview", "description": "Practice system design & React state questions before your next screening.", "action_url": "/interview", "type": "interview"},
-        {"title": "Follow up with Stripe & Vercel", "description": "Review final round interview preparations.", "action_url": "/applications", "type": "applications"}
-    ]
+    next_steps = []
+    if not res_row:
+        next_steps.append({"title": "Analyze your resume", "description": "Upload a PDF or DOCX resume to extract your skills and experience.", "action_url": "/resume", "type": "resume"})
+    if not gap_row:
+        next_steps.append({"title": "Run your skill gap analysis", "description": f"Compare your skills with the requirements for {target_role_title}.", "action_url": "/skill-gap", "type": "skill"})
+    if not rdm_row:
+        next_steps.append({"title": "Start your learning roadmap", "description": f"Generate an actionable learning plan for {target_role_title}.", "action_url": "/roadmap", "type": "roadmap"})
+    elif rdm_pct < 100:
+        next_steps.append({"title": "Continue your learning roadmap", "description": f"Complete the next milestone on your {target_role_title} plan.", "action_url": "/roadmap", "type": "roadmap"})
+    if iv_count == 0:
+        next_steps.append({"title": "Practice a mock interview", "description": "Answer role-specific questions and get feedback on your response.", "action_url": "/interview", "type": "interview"})
+    if total_apps == 0:
+        next_steps.append({"title": "Track your job applications", "description": "Record opportunities and monitor your application pipeline.", "action_url": "/applications", "type": "applications"})
+    if missing_skills:
+        next_steps.append({"title": "Work on your highest-priority skill gap", "description": f"Focus on {missing_skills[0]} for your target role.", "action_url": "/skill-gap", "type": "skill"})
+    next_steps = next_steps[:4]
 
     return DashboardSummaryResponse(
         user_name=user_name,

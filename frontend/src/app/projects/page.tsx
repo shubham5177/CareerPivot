@@ -13,13 +13,13 @@ import {
   ArrowRight,
   TrendingUp,
 } from "lucide-react";
-import { fetchProjects, fetchRoles } from "@/lib/api";
+import { fetchProjects, fetchRoles, getCurrentTargetRoleId } from "@/lib/api";
 import { PortfolioProject, JobRole } from "@/types";
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<PortfolioProject[]>([]);
   const [roles, setRoles] = useState<JobRole[]>([]);
-  const [selectedRole, setSelectedRole] = useState<string>("role-fullstack");
+  const [selectedRole, setSelectedRole] = useState<string>(getCurrentTargetRoleId);
   const [selectedDiff, setSelectedDiff] = useState<string>("all");
   const [loading, setLoading] = useState(true);
 

@@ -13,14 +13,15 @@ This document provides transparent, reproducible documentation for the three mac
 
 ### 2. Training Data
 - **Dataset Source:** `datasets/skills_dataset.csv`
-- **Data Provenance:** Synthetic and curated taxonomy of 432 skill phrase variants covering modern software engineering, data science, DevOps, and cloud ecosystems.
+- **Data Provenance:** Synthetic taxonomy of 144 underlying skill phrases expanded into 432 rows using two generated wording variants per phrase. The dataset is not sampled from real resumes.
 - **Labels:** 8 balanced classes (`frontend`: 78, `backend`: 69, `database`: 57, `cloud`: 54, `data_ml`: 54, `programming`: 48, `security`: 36, `soft_skills`: 36).
 
 ### 3. Quantitative Evaluation
-- **Evaluation Split:** Stratified 75% train / 25% test split (108 held-out test samples).
-- **Test Set Accuracy:** 100.0%
-- **Macro F1 Score:** 1.000
-- **Weighted F1 Score:** 1.000
+- **Evaluation Split:** Four-fold stratified group split by normalized base skill phrase; 108 held-out rows. Generated variants of a phrase cannot cross the split.
+- **Grouped Holdout Accuracy:** 32.41%
+- **Grouped Holdout Macro F1:** 33.65%
+- **Grouped Holdout Weighted F1:** 29.07%
+- **Interpretation:** The high random-split result previously reported was inflated by near-duplicate generated phrases crossing the split. The grouped result indicates weak generalization to unseen skill phrases; this model requires better representative data before its predictions should be treated as reliable.
 
 ### 4. Limitations & Edge Cases
 - Works best on clean single-skill phrases and short skill bullet points (e.g. "React.js with hooks", "PostgreSQL database indexing").
@@ -40,13 +41,13 @@ This document provides transparent, reproducible documentation for the three mac
 
 ### 2. Benchmark Dataset
 - **Dataset Source:** `datasets/job_matching_benchmark.json`
-- **Data Provenance:** 8 diverse benchmark profile-to-role pairs with ground-truth relevance scores established by senior technical interviewers across Junior to Senior positions.
+- **Data Provenance:** 8 synthetic profile-to-role pairs with manually assigned illustrative relevance labels. The labels were not independently validated by interviewers or measured from hiring outcomes.
 
 ### 3. Quantitative Evaluation
-- **Mean Absolute Error (MAE):** $13.40\%$
-- **Pearson Linear Correlation ($r$):** $0.9733$ ($p < 0.0001$)
-- **Spearman Rank Correlation ($\rho$):** $0.9701$ ($p < 0.0001$)
-- **Ranking Preservation:** Candidate suitability tiers (High, Moderate, Low, Irrelevant) are preserved with $100\%$ monotonic consistency.
+- **In-sample Benchmark MAE:** $13.40\%$
+- **Pearson Linear Correlation ($r$):** $0.9733$ on 8 synthetic examples.
+- **Spearman Rank Correlation ($\rho$):** $0.9701$ on 8 synthetic examples.
+- **Interpretation:** The vectorizer vocabulary is fit using the same benchmark examples used for these metrics, and the relevance labels are illustrative. These results are not independent validation or evidence of hiring outcomes.
 
 ### 4. Explainability & Fair Assessment
 - The model computes granular, inspectable match metrics rather than a black-box probability. Candidates receive transparent breakdowns of exactly which required skills were detected and which remain as actionable gaps.
@@ -65,13 +66,14 @@ This document provides transparent, reproducible documentation for the three mac
 
 ### 2. Training Data
 - **Dataset Source:** `datasets/interview_evaluation_dataset.csv`
-- **Data Provenance:** 32 curated question-answer pairs representing varying depths of technical maturity across Frontend, Backend, Data Science, and Cloud domains.
+- **Data Provenance:** 16 synthetic/curated question-answer examples expanded to 32 rows with generated "In my experience" paraphrases. These are not responses collected from job seekers or validated by interview panels.
 
 ### 3. Quantitative Evaluation
-- **Validation Strategy:** 4-Fold Stratified Cross-Validation.
-- **Cross-Validation Accuracy:** $87.50\% \pm 12.50\%$
-- **Final Model Accuracy:** $100.0\%$
-- **Confusion Matrix:** Zero cross-tier inversion (no `insufficient` answer was classified as `proficient` or `exemplary`).
+- **Validation Strategy:** Four-fold stratified group cross-validation, with generated variants of each question-answer pair kept together.
+- **Grouped Cross-Validation Accuracy:** $0.00\%$ on the current 32-row dataset.
+- **Grouped Cross-Validation Macro F1:** $0.00\%$ on the current 32-row dataset.
+- **Final Model Training Accuracy:** 100.0% on the 32 training rows; this is resubstitution accuracy and is not a generalization result.
+- **Limitations:** The small synthetic dataset yields unreliable out-of-fold predictions. The API's keyword/concept coverage, relevance, and structure rubric is explicit and should be treated as coaching feedback, not a hiring decision.
 
 ### 4. Ethical Considerations & Scope Notice
 > [!IMPORTANT]

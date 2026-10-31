@@ -50,12 +50,13 @@ def train_job_matching_model():
     )
     vectorizer.fit(corpus)
 
-    # Evaluate against benchmark pairs
+    # Calibrate against the same illustrative pairs used to fit the vocabulary;
+    # these results are descriptive and are not an independent test estimate.
     y_true = []
     y_pred = []
 
-    print(f"\n[Evaluating Job Matching Pipeline on {len(benchmark)} Benchmark Test Cases]")
-    print(f"{'Test ID':<10} | {'Target Role':<24} | {'Expected':<10} | {'Predicted':<10} | {'Diff':<8}")
+    print(f"\n[Evaluating Job Matching Pipeline on {len(benchmark)} Synthetic Calibration Examples]")
+    print(f"{'Example ID':<10} | {'Target Role':<24} | {'Expected':<10} | {'Predicted':<10} | {'Diff':<8}")
     print("-" * 72)
 
     for item in benchmark:
@@ -103,11 +104,13 @@ def train_job_matching_model():
     meta = {
         "model_name": "job_matching_pipeline",
         "algorithm": "Blended TF-IDF Cosine Similarity + Exact/Sub-token Skill Overlap",
-        "test_mae": round(mae, 4),
+        "benchmark_mae": round(mae, 4),
         "pearson_correlation": round(float(corr_p), 4),
         "spearman_correlation": round(float(corr_s), 4),
         "vocab_size": len(vectorizer.vocabulary_),
-        "benchmark_sample_count": len(benchmark)
+        "benchmark_sample_count": len(benchmark),
+        "evaluation_method": "in_sample_synthetic_benchmark_calibration",
+        "data_provenance": "synthetic role/profile pairs with manually assigned illustrative relevance labels"
     }
     meta_path = os.path.join(MODELS_DIR, "job_matching_meta.json")
     with open(meta_path, "w", encoding="utf-8") as f:

@@ -8,7 +8,6 @@ CareerPivot AI is designed as a modular, production-ready career transition and 
 flowchart TD
     subgraph Client["Next.js App Router (Port 3000)"]
         UI_Home["Landing / Overview (/page)"]
-        UI_Profile["User Registration & Profile (/profile)"]
         UI_Dash["Main Dashboard (/dashboard)"]
         UI_Resume["Resume Analyzer (/resume)"]
         UI_Career["Career Target Selector (/career)"]
@@ -20,7 +19,6 @@ flowchart TD
     end
 
     subgraph API_Gateway["FastAPI Gateway (Port 8000)"]
-        EP_Profile["GET/POST /api/users/profile"]
         EP_Resume["POST /api/resume/parse"]
         EP_Match["POST /api/match/evaluate"]
         EP_Gap["GET/POST /api/skills/gap-analysis"]
@@ -38,7 +36,7 @@ flowchart TD
     end
 
     subgraph Storage["Persistence Layer"]
-        DB[(careerpivot.db SQLite)]
+        DB[(Turso remote SQLite-compatible database)]
         Tables["users, resumes, skills, job_roles, skill_requirements,\nskill_gaps, learning_roadmaps, roadmap_tasks,\nportfolio_projects, interview_sessions, job_applications"]
     end
 
@@ -65,42 +63,3 @@ flowchart TD
 ### 2.3 Frontend Application (`frontend/src/app/`)
 - Built with Next.js 14 App Router, TypeScript, Tailwind CSS, Lucide React, and Recharts.
 - Dark navy SaaS design system with blue/indigo/purple glowing gradients, glassmorphism card surfaces, and accessible typography.
-
-## 3. Complete 10-Step User Journey & Technical Working
-
-```
-Registration & Profile → Resume Upload & Analysis → Career Selection → Skill Gap Matrix → Learning Roadmap → Portfolio Projects → Mock Interview → Job Tracking → Progress Dashboard → Updated Recommendations
-```
-
-1. **User Registration & Profile Creation (`/profile`):**
-   - User creates an account by entering name, email, education, current skills, years of experience, and target career interests.
-   - Synchronized to SQLite `users` table and initializes baseline profile metrics.
-2. **Resume Upload and Analysis (`/resume`):**
-   - Extracts resume content from PDF (PyMuPDF) or DOCX (python-docx).
-   - Segments education, experience, and projects.
-   - Categorizes skills across 8 domains using Model 1 (`skill_classifier_pipeline.joblib`).
-   - Allows candidate manual corrections and saves to database.
-3. **Target Career Selection (`/career`):**
-   - Candidate selects from 9 standard roles (Frontend, Backend, Full Stack, Data Science, ML Engineer, Cloud, Security, etc.) or creates a custom role.
-   - Loads verified role requirements from the database.
-4. **AI-Powered Skill Gap Analysis (`/skill-gap`):**
-   - Model 2 TF-IDF Cosine Similarity engine calculates readiness match score ($0-100\%$) and skill gap percentage.
-   - Displays interactive Recharts Radar Chart for domain balance and prioritizes missing skills (Essential, Important, Nice-to-have).
-5. **Personalized Learning Roadmap (`/roadmap`):**
-   - Generates an 8-week structured transition curriculum.
-   - Includes weekly topics, practical exercises, deliverables, and resource links.
-   - As tasks are completed, the system dynamically recalculates progress.
-6. **Portfolio Project Recommendations (`/projects`):**
-   - Suggests production-grade projects specifically designed to bridge the user's missing skills.
-   - Provides architecture specifications, suggested features, and deliverables.
-7. **AI-Powered Mock Interview (`/interview`):**
-   - Generates relevant technical questions for the selected role and difficulty (Junior, Mid, Senior).
-   - Evaluates typed answers with Model 3 supervised classifier and explainable rubrics: technical coverage, relevance, structure, and missing concepts.
-8. **Job Application Tracker (`/applications`):**
-   - Logs company, title, stage (Wishlist, Applied, Screening, Technical Interview, Final Round, Offer, Rejected), and interview dates.
-   - Computes statistical conversion rates and response performance.
-9. **Personalized Progress Dashboard (`/dashboard`):**
-   - Unified overview of match score gauge, skills verified vs gaps, roadmap completion, interview average, application funnel, and prioritized next steps.
-10. **Updated Recommendations & Iterative Feedback:**
-    - As the user completes roadmap milestones, finishes projects, and passes mock interviews, recommendation weights automatically adjust toward job application readiness.
-

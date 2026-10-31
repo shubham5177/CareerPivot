@@ -22,105 +22,64 @@ import {
   Radar,
   Tooltip,
 } from "recharts";
-import { evaluateJobMatch, fetchRoles } from "@/lib/api";
+import {
+  evaluateJobMatch,
+  fetchLatestResume,
+  fetchRoles,
+  fetchUserProfile,
+  getCurrentUserId,
+  getCurrentTargetRoleId,
+} from "@/lib/api";
 import { JobMatchResult, JobRole } from "@/types";
 import { getScoreColor } from "@/lib/utils";
 
 export default function SkillGapPage() {
   const [matchResult, setMatchResult] = useState<JobMatchResult | null>(null);
   const [roles, setRoles] = useState<JobRole[]>([]);
-  const [selectedRole, setSelectedRole] = useState<string>("role-fullstack");
+  const [selectedRole, setSelectedRole] = useState<string>(() =>
+    typeof window === "undefined"
+      ? "role-fullstack"
+      : new URLSearchParams(window.location.search).get("role") || getCurrentTargetRoleId()
+  );
   const [loading, setLoading] = useState(true);
-
-  // Default candidate skills from Alex Rivera
-  const candidateSkills = [
-    "JavaScript",
-    "React",
-    "HTML5 & CSS3",
-    "Tailwind CSS",
-    "RESTful APIs",
-    "SQL",
-    "Problem Solving & Algorithmic Thinking",
-  ];
+  const [candidateSkills, setCandidateSkills] = useState<string[]>([]);
+  const [error, setError] = useState("");
 
   const runAnalysis = async (roleId: string) => {
     setLoading(true);
+    setError("");
     try {
+      const profile = await fetchUserProfile();
+      let skills = profile.current_skills;
+      try {
+        const resume = await fetchLatestResume();
+        if (resume.extracted_skills?.length) {
+          skills = resume.extracted_skills.map((skill: string | { name: string }) =>
+            typeof skill === "string" ? skill : skill.name
+          );
+        }
+      } catch (cause) {
+        if (!(cause instanceof Error) || !cause.message.includes("No resume found")) {
+          throw cause;
+        }
+      }
+      setCandidateSkills(skills);
       const res = await evaluateJobMatch({
-        user_id: "usr-demo-01",
-        resume_skills: candidateSkills,
+        user_id: getCurrentUserId(),
+        resume_skills: skills,
         job_role_id: roleId,
       });
       setMatchResult(res);
-    } catch (e) {
-      console.error(e);
-      // Fallback result
-      setMatchResult({
-        job_role_id: "role-fullstack",
-        job_title: "Full Stack Developer",
-        match_score: 68.5,
-        skill_gap_percentage: 31.5,
-        matched_skills: [
-          "JavaScript",
-          "React",
-          "Tailwind CSS",
-          "RESTful APIs",
-          "Problem Solving & Algorithmic Thinking",
-        ],
-        missing_skills: [
-          {
-            skill_name: "TypeScript",
-            category: "programming",
-            importance: "Essential",
-            weight: 1.0,
-            recommended_action: "High priority: complete weekly module 1 in roadmap",
-          },
-          {
-            skill_name: "Node.js",
-            category: "backend",
-            importance: "Essential",
-            weight: 1.0,
-            recommended_action: "High priority: complete weekly module 2 in roadmap",
-          },
-          {
-            skill_name: "PostgreSQL",
-            category: "database",
-            importance: "Essential",
-            weight: 1.0,
-            recommended_action: "High priority: complete weekly module 3 in roadmap",
-          },
-          {
-            skill_name: "Docker",
-            category: "cloud",
-            importance: "Important",
-            weight: 0.8,
-            recommended_action: "Medium priority: explore in project milestone",
-          },
-          {
-            skill_name: "Next.js",
-            category: "frontend",
-            importance: "Important",
-            weight: 0.85,
-            recommended_action: "Medium priority: build server-side rendered application",
-          },
-        ],
-        suitability_explanation:
-          "You have a solid frontend foundation in React and modern CSS along with API integration experience. To reach full readiness for a Full Stack Developer role, prioritize mastering TypeScript for type safety, deep Node.js backend development, relational database modeling with PostgreSQL, and containerization with Docker.",
-        category_breakdown: {
-          frontend: { matched: 2, total: 3 },
-          backend: { matched: 1, total: 2 },
-          programming: { matched: 1, total: 2 },
-          database: { matched: 0, total: 1 },
-          cloud: { matched: 0, total: 1 },
-        },
-      });
+    } catch (cause) {
+      setMatchResult(null);
+      setError(cause instanceof Error ? cause.message : "Could not calculate your skill match.");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchRoles().then((data) => setRoles(data)).catch(() => {});
+    fetchRoles().then((data) => setRoles(data)).catch((cause) => setError(cause.message));
     runAnalysis(selectedRole);
   }, []);
 
@@ -137,15 +96,9 @@ export default function SkillGapPage() {
         Required: counts.total,
         fullMark: Math.max(counts.total + 1, 3),
       }))
-    : [
-        { subject: "FRONTEND", Verified: 2, Required: 3, fullMark: 3 },
-        { subject: "BACKEND", Verified: 1, Required: 2, fullMark: 2 },
-        { subject: "DATABASE", Verified: 0, Required: 1, fullMark: 2 },
-        { subject: "CLOUD", Verified: 0, Required: 1, fullMark: 2 },
-        { subject: "LANGUAGES", Verified: 1, Required: 2, fullMark: 2 },
-      ];
+    : [];
 
-  const score = matchResult?.match_score ?? 68.5;
+  const score = matchResult?.match_score ?? 0;
 
   return (
     <div className="max-w-6xl mx-auto space-y-8 pb-12">
@@ -230,10 +183,12 @@ export default function SkillGapPage() {
               {score >= 80 ? "Interview Ready" : score >= 60 ? "Solid Foundation" : "Pivot In Progress"}
             </h3>
             <p className="text-xs text-slate-400 mt-1">
-              Skill gap is {matchResult?.skill_gap_percentage ?? 31.5}%.
+              Skill gap is {matchResult?.skill_gap_percentage ?? 0}%.
             </p>
           </div>
         </div>
+
+        {error && <p role="alert" className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">{error}</p>}
 
         {/* Explainable Suitability Narrative */}
         <div className="md:col-span-2 space-y-2">

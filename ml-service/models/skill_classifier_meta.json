@@ -11,8 +11,11 @@
     "security",
     "soft_skills"
   ],
-  "test_accuracy": 1.0,
-  "test_f1_macro": 1.0,
-  "test_f1_weighted": 1.0,
-  "n_samples": 432
+  "test_accuracy": 0.3241,
+  "test_f1_macro": 0.3365,
+  "test_f1_weighted": 0.2907,
+  "n_samples": 432,
+  "test_samples": 108,
+  "evaluation_method": "stratified_group_holdout_by_normalized_skill_phrase",
+  "data_provenance": "synthetic skill taxonomy with generated phrase variants"
 }

@@ -1,9 +1,11 @@
 {
   "model_name": "job_matching_pipeline",
   "algorithm": "Blended TF-IDF Cosine Similarity + Exact/Sub-token Skill Overlap",
-  "test_mae": 0.134,
+  "benchmark_mae": 0.134,
   "pearson_correlation": 0.9733,
   "spearman_correlation": 0.9701,
   "vocab_size": 381,
-  "benchmark_sample_count": 8
+  "benchmark_sample_count": 8,
+  "evaluation_method": "in_sample_synthetic_benchmark_calibration",
+  "data_provenance": "synthetic role/profile pairs with manually assigned illustrative relevance labels"
 }

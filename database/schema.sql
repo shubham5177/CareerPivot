@@ -17,6 +17,33 @@ CREATE TABLE IF NOT EXISTS users (
     FOREIGN KEY (target_role_id) REFERENCES job_roles(id) ON DELETE SET NULL
 );
 
+CREATE TABLE IF NOT EXISTS user_profiles (
+    user_id TEXT PRIMARY KEY,
+    education_json TEXT NOT NULL DEFAULT '[]',
+    current_skills_json TEXT NOT NULL DEFAULT '[]',
+    experience_json TEXT NOT NULL DEFAULT '[]',
+    career_interests_json TEXT NOT NULL DEFAULT '[]',
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS auth_accounts (
+    user_id TEXT PRIMARY KEY,
+    password_hash TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS auth_sessions (
+    token_hash TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    expires_at DATETIME NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_auth_sessions_user ON auth_sessions(user_id);
+
 -- Job Roles
 CREATE TABLE IF NOT EXISTS job_roles (
     id TEXT PRIMARY KEY,
@@ -61,6 +88,7 @@ CREATE TABLE IF NOT EXISTS resumes (
     education_json TEXT, -- JSON array of education objects
     experience_json TEXT, -- JSON array of experience objects
     projects_json TEXT, -- JSON array of projects
+    certifications_json TEXT, -- JSON array of certifications
     extracted_skills_json TEXT, -- JSON array of skill names/categories
     parsed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE

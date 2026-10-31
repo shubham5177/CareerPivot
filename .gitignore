@@ -57,3 +57,9 @@ Thumbs.db
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Local databases and Vercel project state
+*.db
+*.sqlite
+*.sqlite3
+.vercel/

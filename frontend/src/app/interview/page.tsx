@@ -20,13 +20,15 @@ import {
   evaluateInterviewAnswer,
   fetchInterviewHistory,
   fetchRoles,
+  getCurrentTargetRoleId,
+  getCurrentUserId,
 } from "@/lib/api";
 import { InterviewQuestion, InterviewEvaluation, JobRole } from "@/types";
 import { getScoreColor } from "@/lib/utils";
 
 export default function InterviewPage() {
   const [roles, setRoles] = useState<JobRole[]>([]);
-  const [selectedRole, setSelectedRole] = useState<string>("role-fullstack");
+  const [selectedRole, setSelectedRole] = useState<string>(getCurrentTargetRoleId);
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>("Mid-level");
   const [questions, setQuestions] = useState<InterviewQuestion[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -91,7 +93,7 @@ export default function InterviewPage() {
     setSubmitting(true);
     try {
       const result = await evaluateInterviewAnswer({
-        user_id: "usr-demo-01",
+        user_id: getCurrentUserId(),
         job_role_id: selectedRole,
         difficulty: selectedDifficulty,
         question_id: currentQ.id,

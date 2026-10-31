@@ -11,9 +11,11 @@ import json
 import joblib
 import pandas as pd
 import numpy as np
+from sklearn.model_selection import StratifiedGroupKFold, cross_val_predict
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score, f1_score
 from sklearn.metrics.pairwise import cosine_similarity
 from scipy.stats import pearsonr, spearmanr
+from evaluation_utils import interview_groups, skill_groups
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 MODELS_DIR = os.path.join(BASE_DIR, "models")
@@ -35,16 +37,20 @@ def evaluate_all():
         X = df_skill["text"].astype(str)
         y = df_skill["category"]
 
-        y_pred = pipe.predict(X)
-        acc = accuracy_score(y, y_pred)
-        f1_macro = f1_score(y, y_pred, average="macro")
+        splitter = StratifiedGroupKFold(n_splits=4, shuffle=True, random_state=42)
+        _, test_indices = next(splitter.split(X, y, groups=skill_groups(X)))
+        y_test = y.iloc[test_indices]
+        y_pred = pipe.predict(X.iloc[test_indices])
+        acc = accuracy_score(y_test, y_pred)
+        f1_macro = f1_score(y_test, y_pred, average="macro")
 
         print(f"Algorithm:           TF-IDF Vectorizer + LogisticRegression (Multinomial)")
-        print(f"Total Skill Samples: {len(df_skill)}")
-        print(f"Overall Accuracy:    {acc * 100:.2f}%")
-        print(f"Macro F1 Score:      {f1_macro * 100:.2f}%")
+        print(f"Synthetic skill samples: {len(df_skill)}")
+        print(f"Grouped holdout samples: {len(test_indices)}")
+        print(f"Holdout Accuracy:       {acc * 100:.2f}%")
+        print(f"Holdout Macro F1:        {f1_macro * 100:.2f}%")
         print("\nClassification Report:")
-        print(classification_report(y, y_pred))
+        print(classification_report(y_test, y_pred, zero_division=0))
     else:
         print("Model 1 artifacts not found.")
 
@@ -84,11 +90,11 @@ def evaluate_all():
         s_corr, _ = spearmanr(y_true, y_pred)
 
         print(f"Algorithm:               Blended TF-IDF Cosine Similarity + Skill Overlap")
-        print(f"Evaluation Test Pairs:   {len(benchmarks)}")
+        print(f"Synthetic benchmark pairs: {len(benchmarks)}")
         print(f"Mean Absolute Error:     {mae * 100:.2f}%")
         print(f"Pearson Correlation (r): {p_corr:.4f}")
         print(f"Spearman Rank Corr (rho):{s_corr:.4f}")
-        print("Verdict:                 Exceptional ranking preservation and agreement.")
+        print("Note:                    Descriptive metrics only; this is a small in-sample synthetic benchmark.")
     else:
         print("Model 2 artifacts not found.")
 
@@ -104,14 +110,20 @@ def evaluate_all():
         X_iv = (df_iv["question"] + " [SEP] " + df_iv["answer"]).astype(str)
         y_iv = df_iv["quality_tier"]
 
-        y_iv_pred = evaluator.predict(X_iv)
+        groups = interview_groups(df_iv["question"], df_iv["answer"])
+        splitter = StratifiedGroupKFold(n_splits=4, shuffle=True, random_state=42)
+        y_iv_pred = cross_val_predict(evaluator, X_iv, y_iv, cv=splitter, groups=groups)
         acc_iv = accuracy_score(y_iv, y_iv_pred)
+        f1_iv = f1_score(y_iv, y_iv_pred, average="macro")
         cm = confusion_matrix(y_iv, y_iv_pred, labels=["insufficient", "developing", "proficient", "exemplary"])
 
         print(f"Algorithm:           TF-IDF N-Gram Vectorizer + Multinomial Logistic Regression")
-        print(f"Labeled Test Answers: {len(df_iv)}")
-        print(f"Tier Accuracy:       {acc_iv * 100:.2f}%")
-        print("\nConfusion Matrix (Rows=True, Cols=Predicted: [insufficient, developing, proficient, exemplary]):")
+        print(f"Synthetic/curated answers: {len(df_iv)}")
+        print(f"Grouped 4-fold CV accuracy: {acc_iv * 100:.2f}%")
+        print(f"Grouped 4-fold CV macro F1: {f1_iv * 100:.2f}%")
+        print("\nGrouped cross-validation classification report:")
+        print(classification_report(y_iv, y_iv_pred, zero_division=0))
+        print("Confusion Matrix (Rows=True, Cols=Predicted: [insufficient, developing, proficient, exemplary]):")
         print(cm)
     else:
         print("Model 3 artifacts not found.")

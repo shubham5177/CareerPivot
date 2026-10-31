@@ -21,137 +21,22 @@ import { LearningRoadmap, RoadmapTask } from "@/types";
 export default function RoadmapPage() {
   const [roadmap, setRoadmap] = useState<LearningRoadmap | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [activeWeek, setActiveWeek] = useState<number>(4);
   const [updatingTaskId, setUpdatingTaskId] = useState<string | null>(null);
 
   const loadRoadmap = async () => {
     setLoading(true);
+    setError("");
     try {
       const data = await fetchRoadmap();
       setRoadmap(data);
       // Auto-set active week to first uncompleted task
       const firstIncomp = data.tasks.find((t: RoadmapTask) => !t.is_completed);
       if (firstIncomp) setActiveWeek(firstIncomp.week_number);
-    } catch (e) {
-      console.error(e);
-      // Fallback 8-week structured roadmap
-      setRoadmap({
-        id: "rdm-demo-01",
-        user_id: "usr-demo-01",
-        job_role_id: "role-fullstack",
-        role_title: "Full Stack Developer",
-        title: "8-Week Full Stack Engineer Transition Roadmap",
-        summary: "Structured weekly curriculum bridging React frontend skills into enterprise TypeScript, Node.js microservices, PostgreSQL data modeling, and Docker deployment.",
-        total_weeks: 8,
-        progress_percentage: 37.5,
-        status: "in_progress",
-        tasks: [
-          {
-            id: "task-w1",
-            roadmap_id: "rdm-demo-01",
-            week_number: 1,
-            title: "TypeScript Deep Dive for Frontend & Backend",
-            description: "Master static typing, generics, interfaces, union types, and TS compiler configuration in modern web apps.",
-            topics: ["TypeScript Generics", "Strict Type Checking", "Utility Types (Pick, Omit, Partial)", "TS with React Components"],
-            practice_activities: ["Refactor an existing React app to TypeScript with zero any types", "Implement custom generic hook for API requests"],
-            project_milestone: "Fully typed client repository",
-            recommended_resources: ["TypeScript Official Handbook", "Total TypeScript by Matt Pocock"],
-            is_completed: true,
-            completed_at: "2026-10-15 10:00:00",
-          },
-          {
-            id: "task-w2",
-            roadmap_id: "rdm-demo-01",
-            week_number: 2,
-            title: "Next.js 14 App Router & Server Components",
-            description: "Understand Server vs Client components, Server Actions, streaming SSR, and SEO-optimized dynamic routing.",
-            topics: ["RSC (React Server Components)", "Server Actions & Mutations", "Dynamic Routing & Layouts", "Parallel & Intercepting Routes"],
-            practice_activities: ["Build an interactive server-rendered blog with Server Actions", "Implement route caching and revalidation strategies"],
-            project_milestone: "Next.js App Router Project",
-            recommended_resources: ["Next.js Documentation", "Vercel Academy"],
-            is_completed: true,
-            completed_at: "2026-10-22 14:30:00",
-          },
-          {
-            id: "task-w3",
-            roadmap_id: "rdm-demo-01",
-            week_number: 3,
-            title: "Relational Database Modeling with PostgreSQL",
-            description: "Schema design, normalization, foreign keys, indexing, transactions, and ORM integration.",
-            topics: ["Relational Modeling (1-N, N-N)", "Indexes (B-Tree, Hash, GIN)", "ACID Transactions", "Prisma/Drizzle ORM"],
-            practice_activities: ["Write complex multi-table JOINs and aggregations", "Profile query execution plan using EXPLAIN ANALYZE"],
-            project_milestone: "E-commerce Database Schema & Migrations",
-            recommended_resources: ["PostgreSQL Tutorial", "Use The Index, Luke"],
-            is_completed: true,
-            completed_at: "2026-10-29 18:00:00",
-          },
-          {
-            id: "task-w4",
-            roadmap_id: "rdm-demo-01",
-            week_number: 4,
-            title: "Advanced Backend APIs & Authentication",
-            description: "Architect production-grade REST APIs, JWT authentication, refresh tokens, role-based access control, and rate limiting.",
-            topics: ["JWT & HttpOnly Cookie Auth", "Role-Based Access Control (RBAC)", "Input Validation & Sanitization", "API Rate Limiting"],
-            practice_activities: ["Build an auth microservice with access and refresh tokens", "Implement middleware for authorization"],
-            project_milestone: "Secure Authentication Microservice",
-            recommended_resources: ["OWASP API Security Top 10", "FastAPI / Express Security Best Practices"],
-            is_completed: false,
-            completed_at: null,
-          },
-          {
-            id: "task-w5",
-            roadmap_id: "rdm-demo-01",
-            week_number: 5,
-            title: "Docker Containerization & Multi-Stage Builds",
-            description: "Containerize full stack applications with optimized Dockerfiles, docker-compose orchestration, and volume persistence.",
-            topics: ["Docker Engine Concepts", "Multi-stage Dockerfile optimization", "Docker Compose for local dev", "Environment management"],
-            practice_activities: ["Write multi-stage Dockerfile reducing image size under 150MB", "Run frontend + backend + postgres on compose network"],
-            project_milestone: "Containerized Local Full Stack Stack",
-            recommended_resources: ["Docker Official Getting Started Guide", "Bret Fisher Docker Mastery"],
-            is_completed: false,
-            completed_at: null,
-          },
-          {
-            id: "task-w6",
-            roadmap_id: "rdm-demo-01",
-            week_number: 6,
-            title: "Caching, Redis & Message Queues",
-            description: "Improve latency and handle high throughput with in-memory caching and asynchronous job processing.",
-            topics: ["Redis Key-Value & Sets", "Cache-Aside & Write-Through Patterns", "Session Storage", "Background Task Queues"],
-            practice_activities: ["Implement cache layer with TTL invalidation", "Build an async email dispatch worker"],
-            project_milestone: "High-Throughput Caching Layer",
-            recommended_resources: ["Redis University", "Designing Data-Intensive Applications"],
-            is_completed: false,
-            completed_at: null,
-          },
-          {
-            id: "task-w7",
-            roadmap_id: "rdm-demo-01",
-            week_number: 7,
-            title: "Automated CI/CD & Cloud Deployment",
-            description: "Deploy full-stack services with automated testing, linting, GitHub Actions CI/CD, and cloud hosting.",
-            topics: ["GitHub Actions Workflows", "Automated Unit & Integration Tests", "Cloud Deployment (AWS/Render/Vercel)", "Zero-downtime deployment"],
-            practice_activities: ["Set up pipeline that runs lint + tests on PR", "Automate staging deploy on git push"],
-            project_milestone: "Live CI/CD Deployment Pipeline",
-            recommended_resources: ["GitHub Actions Docs", "The Twelve-Factor App"],
-            is_completed: false,
-            completed_at: null,
-          },
-          {
-            id: "task-w8",
-            roadmap_id: "rdm-demo-01",
-            week_number: 8,
-            title: "Full Capstone Project & System Design",
-            description: "Consolidate skills into a portfolio-worthy full-stack product with end-to-end documentation, architecture diagram, and live demo.",
-            topics: ["System Architecture Planning", "API Documentation (Swagger/OpenAPI)", "Performance Benchmarking", "Interview Portfolio Preparation"],
-            practice_activities: ["Conduct end-to-end load test using k6", "Record 3-minute video walkthrough of technical architecture"],
-            project_milestone: "Production Capstone Live Demo",
-            recommended_resources: ["System Design Primer", "Full Stack Open"],
-            is_completed: false,
-            completed_at: null,
-          },
-        ],
-      });
+    } catch (cause) {
+      setRoadmap(null);
+      setError(cause instanceof Error ? cause.message : "Could not load your roadmap.");
     } finally {
       setLoading(false);
     }
@@ -164,6 +49,7 @@ export default function RoadmapPage() {
   const handleToggleTask = async (task: RoadmapTask) => {
     if (!roadmap) return;
     const newStatus = !task.is_completed;
+    setError("");
     setUpdatingTaskId(task.id);
 
     try {
@@ -180,25 +66,15 @@ export default function RoadmapPage() {
         progress_percentage: newProgress,
         tasks: updatedTasks,
       });
-    } catch (e) {
-      console.error(e);
-      // Fallback local toggle
-      const updatedTasks = roadmap.tasks.map((t) =>
-        t.id === task.id ? { ...t, is_completed: newStatus } : t
-      );
-      const completedCount = updatedTasks.filter((t) => t.is_completed).length;
-      setRoadmap({
-        ...roadmap,
-        progress_percentage: Math.round((completedCount / updatedTasks.length) * 100),
-        tasks: updatedTasks,
-      });
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not update the roadmap task.");
     } finally {
       setUpdatingTaskId(null);
     }
   };
 
   const currentTask = roadmap?.tasks.find((t) => t.week_number === activeWeek) || roadmap?.tasks[0];
-  const progress = roadmap?.progress_percentage ?? 37.5;
+  const progress = roadmap?.progress_percentage ?? 0;
 
   return (
     <div className="max-w-6xl mx-auto space-y-8 pb-12">
@@ -215,6 +91,8 @@ export default function RoadmapPage() {
             Weekly structured path calibrated to close your verified skill gaps for {roadmap?.role_title}.
           </p>
         </div>
+
+        {error && <p role="alert" className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">{error}</p>}
 
         <button
           onClick={loadRoadmap}

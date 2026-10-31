@@ -8,7 +8,7 @@ CAREERPIVOT AI is a hackathon-ready, full-stack career coaching platform that gu
 
 ```mermaid
 flowchart LR
-    subgraph Frontend["Next.js App Router (Port 3000)"]
+    subgraph Frontend["Next.js App Router (Vercel / Port 3000)"]
         UI_Home["Landing / Overview"]
         UI_Dash["Dashboard"]
         UI_Resume["Resume Analyzer"]
@@ -20,15 +20,15 @@ flowchart LR
         UI_Apps["Job Application Tracker"]
     end
 
-    subgraph Backend["FastAPI ML Engine (Port 8000)"]
+    subgraph Backend["FastAPI ML Engine (Vercel Functions / Port 8000)"]
         M1["Model 1: Skill Classifier (Joblib)"]
         M2["Model 2: TF-IDF Job Matcher (Joblib)"]
         M3["Model 3: Interview Rubric Evaluator (Joblib)"]
         Parser["Document Extraction (PyMuPDF & python-docx)"]
     end
 
-    subgraph Storage["SQLite Relational DB"]
-        DB[(careerpivot.db)]
+    subgraph Storage["Turso remote SQLite-compatible database"]
+        DB[(Turso)]
     end
 
     Frontend -->|REST APIs| Backend
@@ -44,19 +44,24 @@ All models are trained with reproducible Python scripts and saved to `ml-service
 ### Model 1: Resume Skill Categorization Classifier
 - **Algorithm:** Supervised character/word n-gram `TfidfVectorizer` + multinomial `LogisticRegression`.
 - **Taxonomies (8 Domains):** `frontend`, `backend`, `database`, `cloud`, `programming`, `soft_skills`, `data_ml`, `security`.
-- **Accuracy:** $100.0\%$ test accuracy on 108 held-out stratified test samples.
+- **Data:** Synthetic skill phrases with generated paraphrase variants; variants are grouped together during evaluation to prevent train/test leakage.
+- **Grouped holdout results:** 32.41% accuracy, 33.65% macro F1, 29.07% weighted F1 on 108 held-out samples (reproduced from the current training run).
+- **Limitation:** The low held-out score shows weak transfer to unseen skill phrases. These synthetic results are not evidence of performance on real resumes.
 - **Artifact:** `ml-service/models/skill_classifier_pipeline.joblib`
 
 ### Model 2: TF-IDF Job Matching & Ranking Engine
 - **Algorithm:** Blended TF-IDF Cosine Similarity ($25\%$) + Weighted Direct Skill Overlap ($75\%$).
-- **Correlation:** Pearson $r = 0.9733$, Spearman $\rho = 0.9701$ on benchmark test pairs.
+- **Data and results:** 8 synthetic profile/role examples with manually assigned illustrative relevance labels; current calibration MAE is 13.40%, Pearson $r = 0.9733$, and Spearman $\rho = 0.9701$ on those same examples.
+- **Limitation:** This small in-sample benchmark is descriptive only, not an independent or human-validated estimate of job matching performance.
 - **Outputs:** Job match score ($0-100\%$), missing skills prioritized by importance, and transparent suitability narrative.
 - **Artifact:** `ml-service/models/job_matching_vectorizer.joblib`
 
 ### Model 3: Mock Interview Quality & Rubric Evaluator
 - **Algorithm:** TF-IDF n-gram vectorizer + multinomial logistic regression for 4 quality tiers (`exemplary`, `proficient`, `developing`, `insufficient`).
 - **Scoring Rubric:** Technical concept coverage, topical relevance, and structural clarity.
-- **Validation:** 4-Fold Stratified Cross-Validation Accuracy: $87.50\% \pm 12.50\%$.
+- **Data:** Synthetic/curated answer examples, including generated paraphrase variants. Grouped cross-validation keeps variants of an answer in the same fold.
+- **Grouped cross-validation results:** 0.00% accuracy and 0.00% macro F1 on the current 32-row dataset; the final fitted model's 100% training accuracy is not a generalization result.
+- **Limitation:** The classifier does not generalize on this small synthetic dataset. Interview feedback is driven by the transparent rubric and should not be treated as a hiring decision.
 - **Artifact:** `ml-service/models/interview_evaluator.joblib`
 
 ---
@@ -66,92 +71,97 @@ All models are trained with reproducible Python scripts and saved to `ml-service
 - **Frontend:** Next.js 14 (App Router), React 18, TypeScript, Tailwind CSS, Lucide React, Recharts.
 - **Backend:** Python 3.12, FastAPI, Uvicorn, SQLite3, Pydantic v2.
 - **Machine Learning & NLP:** Scikit-Learn, Pandas, NumPy, Joblib, PyMuPDF (`fitz`), `python-docx`.
-- **Database:** Normalized SQLite schema with 13 tables, foreign key constraints, and seed data.
+- **Database:** Normalized SQLite schema with 13 tables, foreign key constraints, and seed data; Turso provides persistent storage in Vercel deployments.
 
 ---
 
-## 4. Setup & Running Instructions
+## 4. Deploying to Vercel
+
+The application is deployed as two Vercel projects from the same Git repository so the Next.js frontend and Python ML API each use their own runtime. The FastAPI service uses Turso for durable shared data; Vercel function filesystems are temporary and must not be used for user data.
+
+1. Create a Turso database and an auth token. Keep the token private. The API initializes the schema and seed/catalog data on startup.
+2. Import the repository into Vercel as the **API** project. Set **Root Directory** to the repository root (`.`), use the detected FastAPI/Python runtime, and set these environment variables for Production and Preview:
+   - `TURSO_DATABASE_URL` — the database URL from Turso.
+   - `TURSO_AUTH_TOKEN` — the database auth token.
+   - `FRONTEND_ORIGINS` — comma-separated exact frontend origins allowed to submit writes, for example `https://career-pivot.vercel.app`.
+   - `SESSION_COOKIE_SECURE=true` — Vercel also forces secure cookies automatically.
+3. Import the same repository again as the **frontend** project. Set **Root Directory** to `frontend` and use the Next.js framework preset. Set `API_BACKEND_ORIGIN` to the API project's stable HTTPS origin, for example `https://career-pivot-api.vercel.app`. Keep `NEXT_PUBLIC_API_URL` unset or set it to `/api`.
+4. Deploy the API first and copy its deployment origin into `API_BACKEND_ORIGIN`. Add the frontend Production and Preview domains to `FRONTEND_ORIGINS` in the API project, then redeploy both projects. The frontend proxies `/api/*` to the API so browser requests and HttpOnly session cookies remain same-origin.
+
+The Python API entrypoint is the root [`main.py`](./main.py); its dependencies come from the root [`requirements.txt`](./requirements.txt). For local development, the API continues to use `careerpivot.db` when Turso credentials are absent. On Vercel, startup fails explicitly if the Turso URL or token is missing rather than silently using an ephemeral database. The API project runs Python 3.12; the scikit-learn version is pinned to match the checked-in model artifacts.
+
+This repository contains deployment configuration, but deployment still requires connecting both Vercel projects and providing Turso credentials in their dashboards. Existing local SQLite user data is not automatically copied to Turso.
+
+## 5. Local Setup & Running Instructions
 
 ### Step 1: Clone & Navigate to Workspace
 ```powershell
-cd C:\Users\SHUBHAM\.gemini\antigravity\scratch\CareerPivotAI
+cd C:\path\to\CareerPivotAI
 ```
 
 ### Step 2: Prepare Datasets & Train Machine Learning Models
+If you need to retrain the included models:
 ```powershell
 cd ml-service
-python training/prepare_dataset.py
-python training/train_skill_model.py
-python training/train_matching_model.py
-python training/train_interview_model.py
-python training/evaluate_models.py
+py -3.12 training/prepare_dataset.py
+py -3.12 training/train_skill_model.py
+py -3.12 training/train_matching_model.py
+py -3.12 training/train_interview_model.py
+py -3.12 training/evaluate_models.py
 cd ..
 ```
 
 ### Step 3: Start the FastAPI Backend (Port 8000)
 ```powershell
 cd ml-service
-python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+py -3.12 -m pip install -r requirements.txt
+py -3.12 -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 API Documentation will be live at: `http://127.0.0.1:8000/docs`
 
 ### Step 4: Start the Next.js Frontend (Port 3000)
 Open a new terminal window:
 ```powershell
-cd C:\Users\SHUBHAM\.gemini\antigravity\scratch\CareerPivotAI\frontend
+cd C:\path\to\CareerPivotAI\frontend
 npm run dev
 ```
 Open `http://localhost:3000` in your web browser.
+Create an account at `http://localhost:3000/register` or sign in at `http://localhost:3000/login`. The app requires a signed-in account before opening the coaching workspace. Passwords are stored as PBKDF2-SHA256 hashes; sign-in uses a 14-day, HttpOnly session cookie backed by SQLite. For HTTPS deployments, set `SESSION_COOKIE_SECURE=true` and configure `FRONTEND_ORIGINS` with the exact frontend origin.
+
+The default API URL uses `localhost` to keep the frontend and session cookie on the same site. If you change the frontend host or port, update `NEXT_PUBLIC_API_URL` and `FRONTEND_ORIGINS` to match. Existing profile-only records created before password authentication have no stored credentials and cannot be signed into until an administrator securely migrates them; registration will not let someone claim an existing email address without verification.
 
 ---
 
-## 5. Complete User Journey & Working Workflow
+## 6. Main Features & Workflows
 
-The platform provides an end-to-end guided career development journey:
-
-```
-Registration & Profile → Resume Upload & Analysis → Career Selection → Skill Gap Matrix → Learning Roadmap → Portfolio Projects → Mock Interview → Job Tracking → Progress Dashboard → Updated Recommendations
-```
-
-1. **User Registration & Profile Creation (`/profile`):**
-   - User creates an account by entering their name, email, education, current skills, years of experience, and career interests.
-   - Synchronized to SQLite database and establishes baseline profile metrics.
-
-2. **Resume Upload & Analysis (`/resume`):**
-   - Upload PDF, DOCX, or paste text.
-   - Parses education, work history, projects, and extracts skills using Model 1 (`skill_classifier_pipeline.joblib`) across 8 domains.
+1. **Resume Analyzer (`/resume`):**
+   - Upload PDF or DOCX files up to 4 MB, or paste resume text.
+   - Parses education, work history, projects, and extracts skills using Model 1.
    - Allows manual skill additions and deletions with real-time category updates.
 
-3. **Target Career Selection (`/career`):**
-   - 9 built-in high-demand tech pathways (Frontend, Backend, Full Stack, Data Science, ML Engineer, Cloud, Security, etc.) + custom job role builder.
+2. **Career Selection (`/career`):**
+   - 9 built-in high-demand tech pathways + custom job role builder.
    - Real-time salary ranges, demand ratings, and core skill requirements.
 
-4. **AI-Powered Skill Gap Analysis (`/skill-gap`):**
-   - Model 2 TF-IDF Cosine Similarity engine compares candidate profile against job specifications.
-   - Calculates match score ($0-100\%$) and skill gap percentage.
+3. **Skill Gap Matrix (`/skill-gap`):**
+   - Model 2 matching engine compares candidate profile against job specifications.
    - Interactive Recharts Radar Chart visualizing domain balances.
-   - Prioritized missing skill gaps (Essential, Important, Nice-to-have) with action steps.
+   - Prioritized missing skill gaps (Essential, Important, Nice-to-have).
 
-5. **Personalized Learning Roadmap (`/roadmap`):**
+4. **Learning Roadmap (`/roadmap`):**
    - 8-week structured transition curriculum.
-   - Weekly tasks, practice activities, project deliverables, and resource links.
+   - Tasks, practice activities, project deliverables, and resource links.
    - Checkbox tracking with automated progress recalculation.
 
-6. **Portfolio Project Recommendations (`/projects`):**
+5. **Portfolio Projects (`/projects`):**
    - Curated architectural projects targeting specific skill gaps.
-   - Filter by pathway and difficulty (Beginner, Intermediate, Advanced) with full technical specifications.
+   - Filter by pathway and difficulty (Beginner, Intermediate, Advanced).
 
-7. **AI-Powered Mock Interview (`/interview`):**
+6. **Mock Interview Arena (`/interview`):**
    - Select target role and difficulty (Junior, Mid-level, Senior).
    - Type structured answers; evaluated honestly by Model 3 without fake biometric claims.
-   - Displays sub-scores (Relevance, Coverage, Structure), concept coverage tags, and targeted improvement suggestions.
+   - Displays sub-scores, concept coverage, and targeted improvement suggestions.
 
-8. **Job Application Tracker (`/applications`):**
-   - Manage application pipelines (Wishlist, Applied, Screening, Technical Interview, Final Round, Offer, Rejected).
+7. **Job Application Tracker (`/applications`):**
+   - Manage application pipelines (Wishlist, Applied, Screening, Technical, Final, Offer).
    - Real funnel conversion analytics (Interview rate, offer rate, timeline).
-
-9. **Personalized Dashboard (`/dashboard`):**
-   - Unified overview of match score gauge, skills verified vs gaps, roadmap completion, interview average, application funnel, and prioritized next steps.
-
-10. **Updated Recommendations & Iterative Feedback:**
-    - As the user completes roadmap milestones, finishes projects, and passes mock interviews, recommendation weights automatically adjust toward job application readiness.

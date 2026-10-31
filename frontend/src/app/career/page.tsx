@@ -14,12 +14,17 @@ import {
   X,
   Layers,
 } from "lucide-react";
-import { fetchRoles, createCustomRole } from "@/lib/api";
+import {
+  fetchRoles,
+  createCustomRole,
+  getCurrentTargetRoleId,
+  updateUserProfile,
+} from "@/lib/api";
 import { JobRole } from "@/types";
 
 export default function CareerPage() {
   const [roles, setRoles] = useState<JobRole[]>([]);
-  const [selectedRoleId, setSelectedRoleId] = useState<string>("role-fullstack");
+  const [selectedRoleId, setSelectedRoleId] = useState<string>(getCurrentTargetRoleId);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
 
@@ -160,6 +165,8 @@ export default function CareerPage() {
       });
 
       setRoles([created, ...roles]);
+      await updateUserProfile({ target_role_id: created.id });
+      localStorage.setItem("careerpivot_target_role_id", created.id);
       setSelectedRoleId(created.id);
       setShowModal(false);
       setCustomTitle("");
@@ -169,6 +176,16 @@ export default function CareerPage() {
       alert("Error creating custom role: " + err.message);
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleSelectTarget = async (roleId: string) => {
+    try {
+      await updateUserProfile({ target_role_id: roleId });
+      localStorage.setItem("careerpivot_target_role_id", roleId);
+      setSelectedRoleId(roleId);
+    } catch (err) {
+      alert("Could not save your target career: " + (err instanceof Error ? err.message : "Unknown error"));
     }
   };
 
@@ -262,7 +279,7 @@ export default function CareerPage() {
               {/* Action Footer */}
               <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between">
                 <button
-                  onClick={() => setSelectedRoleId(role.id)}
+                  onClick={() => handleSelectTarget(role.id)}
                   className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 ${
                     isSelected
                       ? "bg-blue-600 text-white"

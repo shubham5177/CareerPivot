@@ -66,7 +66,8 @@ def parse_resume_sections(text: str) -> Dict[str, Any]:
         "education": [],
         "experience": [],
         "skills_raw": [],
-        "projects": []
+        "projects": [],
+        "certifications": []
     }
 
     # Common section markers
@@ -74,7 +75,8 @@ def parse_resume_sections(text: str) -> Dict[str, Any]:
         "education": r'(?:EDUCATION|ACADEMIC BACKGROUND|DEGREES)',
         "experience": r'(?:EXPERIENCE|WORK EXPERIENCE|EMPLOYMENT HISTORY|PROFESSIONAL EXPERIENCE)',
         "skills": r'(?:SKILLS|TECHNICAL SKILLS|CORE COMPETENCIES|AREAS OF EXPERTISE)',
-        "projects": r'(?:PROJECTS|PERSONAL PROJECTS|KEY PROJECTS|PORTFOLIO)'
+        "projects": r'(?:PROJECTS|PERSONAL PROJECTS|KEY PROJECTS|PORTFOLIO)',
+        "certifications": r'(?:CERTIFICATIONS|CERTIFICATES|LICENSES)'
     }
 
     # Find headers and indices
@@ -163,5 +165,12 @@ def parse_resume_sections(text: str) -> Dict[str, Any]:
                     current_proj["description"] += " " + line
         if current_proj:
             sections["projects"].append(current_proj)
+
+    if "certifications" in section_texts:
+        sections["certifications"] = [
+            re.sub(r"^[-*•\s]+", "", line).strip()
+            for line in section_texts["certifications"].split("\n")
+            if line.strip()
+        ]
 
     return sections

@@ -11,16 +11,16 @@ import {
   FolderGit2,
   Mic,
   Briefcase,
+  UserRound,
   Sparkles,
   ChevronRight,
   TrendingUp,
-  User,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navigationItems = [
   { name: "Overview", href: "/", icon: Sparkles },
-  { name: "My Profile", href: "/profile", icon: User },
+  { name: "My Profile", href: "/profile", icon: UserRound },
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Resume Analyzer", href: "/resume", icon: FileText, badge: "ML" },
   { name: "Career Selection", href: "/career", icon: Compass },
@@ -92,26 +92,13 @@ export function Sidebar() {
         })}
       </div>
 
-      {/* Transition Target Card Footer */}
-      <div className="p-3.5 m-3 rounded-xl bg-gradient-to-b from-slate-900/90 to-slate-900/50 border border-slate-800">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-[11px] font-semibold text-slate-400">Target Role</span>
-          <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
-            68.5% Match
-          </span>
-        </div>
-        <p className="text-xs font-semibold text-white truncate">Full Stack Developer</p>
-        <div className="mt-2.5 w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
-          <div className="bg-gradient-to-r from-blue-500 to-indigo-500 h-full w-[68.5%] rounded-full" />
-        </div>
-        <Link
-          href="/skill-gap"
-          className="mt-3 text-[11px] text-blue-400 hover:text-blue-300 font-medium flex items-center justify-between pt-2 border-t border-slate-800/80 group"
-        >
-          <span>Bridge Remaining Gaps</span>
-          <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-        </Link>
-      </div>
+      <Link href="/career" className="m-3 rounded-xl border border-slate-800 bg-gradient-to-b from-slate-900/90 to-slate-900/50 p-3.5">
+        <span className="text-[11px] font-semibold text-slate-400">Career Target</span>
+        <span className="mt-1 flex items-center justify-between text-xs font-semibold text-white">
+          Choose or update a role
+          <ChevronRight className="h-3.5 w-3.5 text-blue-400" />
+        </span>
+      </Link>
     </aside>
   );
 }

@@ -1,11 +1,50 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Bell, Sparkles, User, ExternalLink, Activity } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { LogOut, Sparkles } from "lucide-react";
+import { clearCurrentUser, getCurrentUserName, logoutUser } from "@/lib/api";
 
 export function Navbar() {
+  const router = useRouter();
+  const [userName, setUserName] = useState("");
+  const [logoutError, setLogoutError] = useState("");
+  const [signingOut, setSigningOut] = useState(false);
+  const initials = userName
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0].toUpperCase())
+    .join("");
+
+  useEffect(() => {
+    setUserName(getCurrentUserName());
+    const syncName = () => setUserName(getCurrentUserName());
+    window.addEventListener("storage", syncName);
+    window.addEventListener("careerpivot-profile-updated", syncName);
+    return () => {
+      window.removeEventListener("storage", syncName);
+      window.removeEventListener("careerpivot-profile-updated", syncName);
+    };
+  }, []);
+
+  async function handleSignOut() {
+    setSigningOut(true);
+    setLogoutError("");
+    try {
+      await logoutUser();
+      clearCurrentUser();
+      router.replace("/login");
+    } catch (cause) {
+      setLogoutError(cause instanceof Error ? cause.message : "Could not sign out.");
+    } finally {
+      setSigningOut(false);
+    }
+  }
+
   return (
-    <header className="h-16 border-b border-slate-800 bg-[#0B1120]/80 backdrop-blur-md sticky top-0 z-30 flex items-center justify-between px-6">
+    <header className="relative h-16 border-b border-slate-800 bg-[#0B1120]/80 backdrop-blur-md sticky top-0 z-30 flex items-center justify-between px-6">
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
           <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -28,19 +67,26 @@ export function Navbar() {
         <div className="h-4 w-[1px] bg-slate-800 mx-1" />
 
         {/* User Pill */}
-        <Link
-          href="/profile"
-          className="flex items-center gap-2.5 pl-1 pr-3 py-1 bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 rounded-full transition-all group"
-        >
-          <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500 flex items-center justify-center text-white text-xs font-bold shadow-sm">
-            AR
+        <div className="flex items-center gap-2.5 pl-1 pr-3 py-1 bg-slate-900 border border-slate-800 rounded-full">
+          <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500 flex items-center justify-center text-white text-xs font-bold">
+            {initials}
           </div>
           <div className="text-left">
-            <p className="text-xs font-semibold text-white leading-none group-hover:text-blue-400 transition-colors">Alex Rivera</p>
-            <p className="text-[10px] text-slate-400 leading-tight">Profile & Goals</p>
+            <p className="text-xs font-semibold text-white leading-none">{userName}</p>
+            <p className="text-[10px] text-slate-400 leading-tight">Career Profile</p>
           </div>
-        </Link>
+        </div>
+        <button
+          type="button"
+          onClick={handleSignOut}
+          disabled={signingOut}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 px-3 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-800 disabled:opacity-50"
+        >
+          <LogOut className="h-3.5 w-3.5" />
+          {signingOut ? "Signing out..." : "Sign out"}
+        </button>
       </div>
+      {logoutError && <p role="alert" className="absolute right-6 top-full mt-2 rounded-lg border border-rose-500/30 bg-slate-950 px-3 py-2 text-xs text-rose-300">{logoutError}</p>}
     </header>
   );
 }

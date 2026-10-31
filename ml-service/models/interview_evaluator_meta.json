@@ -7,8 +7,12 @@
     "proficient",
     "exemplary"
   ],
-  "cv_accuracy_mean": 0.875,
-  "cv_accuracy_std": 0.125,
+  "cv_accuracy_mean": 0.0,
+  "cv_accuracy_std": 0.0,
+  "cv_f1_macro_mean": 0.0,
+  "cv_f1_macro_std": 0.0,
   "train_accuracy": 1.0,
-  "n_samples": 32
+  "n_samples": 32,
+  "evaluation_method": "stratified_grouped_4_fold_by_normalized_question_answer",
+  "data_provenance": "synthetic/curated answer examples with generated text variants"
 }

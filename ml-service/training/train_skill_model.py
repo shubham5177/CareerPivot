@@ -8,11 +8,12 @@ import os
 import json
 import joblib
 import pandas as pd
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import StratifiedGroupKFold
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 from sklearn.metrics import classification_report, accuracy_score, f1_score, confusion_matrix
+from evaluation_utils import skill_groups
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 DATA_PATH = os.path.join(BASE_DIR, "datasets", "skills_dataset.csv")
@@ -27,10 +28,11 @@ def train_skill_classifier():
     X = df["text"].astype(str)
     y = df["category"]
 
-    # Stratified Train/Test split
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.25, random_state=42, stratify=y
-    )
+    # Keep generated paraphrases of the same skill phrase in a single split.
+    splitter = StratifiedGroupKFold(n_splits=4, shuffle=True, random_state=42)
+    train_indices, test_indices = next(splitter.split(X, y, groups=skill_groups(X)))
+    X_train, X_test = X.iloc[train_indices], X.iloc[test_indices]
+    y_train, y_test = y.iloc[train_indices], y.iloc[test_indices]
 
     # ML Pipeline: TF-IDF n-grams + Logistic Regression with balanced weights
     pipeline = Pipeline([
@@ -50,7 +52,7 @@ def train_skill_classifier():
     print(f"Accuracy:    {acc * 100:.2f}%")
     print(f"Macro F1:    {f1_macro * 100:.2f}%")
     print(f"Weighted F1: {f1_weighted * 100:.2f}%\n")
-    print(classification_report(y_test, y_pred))
+    print(classification_report(y_test, y_pred, zero_division=0))
 
     # Save artifacts
     model_path = os.path.join(MODELS_DIR, "skill_classifier_pipeline.joblib")
@@ -66,7 +68,10 @@ def train_skill_classifier():
         "test_accuracy": round(float(acc), 4),
         "test_f1_macro": round(float(f1_macro), 4),
         "test_f1_weighted": round(float(f1_weighted), 4),
-        "n_samples": len(df)
+        "n_samples": len(df),
+        "test_samples": len(X_test),
+        "evaluation_method": "stratified_group_holdout_by_normalized_skill_phrase",
+        "data_provenance": "synthetic skill taxonomy with generated phrase variants"
     }
     meta_path = os.path.join(MODELS_DIR, "skill_classifier_meta.json")
     with open(meta_path, "w", encoding="utf-8") as f:

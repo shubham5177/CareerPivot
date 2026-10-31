@@ -6,29 +6,6 @@ from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field
 
 # User & Role Schemas
-class UserProfileCreate(BaseModel):
-    name: str
-    email: str
-    current_title: Optional[str] = "Student / Career Pivot Aspirant"
-    years_of_experience: float = 0.0
-    target_role_id: Optional[str] = "role-fullstack"
-    education: Optional[str] = None
-    current_skills: Optional[List[str]] = []
-    bio: Optional[str] = None
-
-class UserProfileResponse(BaseModel):
-    id: str
-    name: str
-    email: str
-    current_title: str
-    years_of_experience: float
-    target_role_id: Optional[str] = None
-    target_role_title: Optional[str] = None
-    education: Optional[str] = None
-    current_skills: List[str] = []
-    bio: Optional[str] = None
-    created_at: Optional[str] = None
-
 class JobRoleSchema(BaseModel):
     id: str
     title: str
@@ -38,6 +15,47 @@ class JobRoleSchema(BaseModel):
     demand_level: str = "High"
     is_custom: int = 0
     skills: Optional[List[str]] = []
+
+class UserRegistrationRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=120)
+    email: str = Field(min_length=3, max_length=254)
+    password: str = Field(min_length=10, max_length=128)
+    current_title: str = Field(default="Student / Career Changer", max_length=160)
+    years_of_experience: float = Field(default=0.0, ge=0, le=80)
+    target_role_id: Optional[str] = None
+    bio: Optional[str] = None
+    education: List[str] = Field(default_factory=list)
+    current_skills: List[str] = Field(default_factory=list)
+    experience: List[str] = Field(default_factory=list)
+    career_interests: List[str] = Field(default_factory=list)
+
+class LoginRequest(BaseModel):
+    email: str = Field(min_length=3, max_length=254)
+    password: str = Field(min_length=1, max_length=128)
+
+class UserProfileUpdate(BaseModel):
+    current_title: Optional[str] = Field(default=None, max_length=160)
+    years_of_experience: Optional[float] = Field(default=None, ge=0, le=80)
+    target_role_id: Optional[str] = None
+    bio: Optional[str] = None
+    education: Optional[List[str]] = None
+    current_skills: Optional[List[str]] = None
+    experience: Optional[List[str]] = None
+    career_interests: Optional[List[str]] = None
+
+class UserProfileResponse(BaseModel):
+    id: str
+    name: str
+    email: str
+    current_title: Optional[str] = None
+    years_of_experience: float = 0.0
+    target_role_id: Optional[str] = None
+    target_role_title: Optional[str] = None
+    bio: Optional[str] = None
+    education: List[str] = Field(default_factory=list)
+    current_skills: List[str] = Field(default_factory=list)
+    experience: List[str] = Field(default_factory=list)
+    career_interests: List[str] = Field(default_factory=list)
 
 class CustomJobRoleRequest(BaseModel):
     title: str
@@ -64,6 +82,7 @@ class ResumeParseResponse(BaseModel):
     education: List[Dict[str, Any]] = []
     experience: List[Dict[str, Any]] = []
     projects: List[Dict[str, Any]] = []
+    certifications: List[str] = []
     extracted_skills: List[ExtractedSkill] = []
 
 class ResumeSaveRequest(BaseModel):
@@ -75,6 +94,7 @@ class ResumeSaveRequest(BaseModel):
     education: List[Dict[str, Any]] = []
     experience: List[Dict[str, Any]] = []
     projects: List[Dict[str, Any]] = []
+    certifications: List[str] = []
     extracted_skills: List[str] = []
 
 # Job Matching & Skill Gap Schemas

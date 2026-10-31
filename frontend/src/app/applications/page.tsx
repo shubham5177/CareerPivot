@@ -22,6 +22,8 @@ import {
   updateApplication,
   deleteApplication,
   fetchApplicationAnalytics,
+  getCurrentUserId,
+  getCurrentTargetRoleId,
 } from "@/lib/api";
 import { JobApplication, ApplicationAnalytics } from "@/types";
 
@@ -41,9 +43,11 @@ export default function ApplicationsPage() {
   const [appDate, setAppDate] = useState(new Date().toISOString().split("T")[0]);
   const [jobDesc, setJobDesc] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [loadError, setLoadError] = useState("");
 
   const loadData = async () => {
     setLoading(true);
+    setLoadError("");
     try {
       const apps = await fetchApplications();
       setApplications(apps);
@@ -51,69 +55,9 @@ export default function ApplicationsPage() {
       setAnalytics(stats);
     } catch (e) {
       console.error(e);
-      // Fallback applications
-      setApplications([
-        {
-          id: "app-1",
-          user_id: "usr-demo-01",
-          company: "Stripe",
-          job_title: "Full Stack Software Engineer",
-          target_role_id: "role-fullstack",
-          target_role_title: "Full Stack Developer",
-          location: "Remote (US)",
-          salary_range: "$135,000 - $165,000",
-          status: "Technical Interview",
-          application_date: "2026-10-10",
-          interview_date: "2026-11-04",
-          outcome_notes: "Passed phone screen. Preparing for system design and live coding round.",
-          match_score: 82.0,
-        },
-        {
-          id: "app-2",
-          user_id: "usr-demo-01",
-          company: "Vercel",
-          job_title: "Frontend Platform Engineer",
-          target_role_id: "role-frontend",
-          target_role_title: "Frontend Developer",
-          location: "Remote",
-          salary_range: "$120,000 - $150,000",
-          status: "Final Round",
-          application_date: "2026-10-05",
-          interview_date: "2026-11-02",
-          outcome_notes: "Completed take-home challenge with high praise on component architecture.",
-          match_score: 91.5,
-        },
-        {
-          id: "app-3",
-          user_id: "usr-demo-01",
-          company: "Datadog",
-          job_title: "Backend Systems Engineer",
-          target_role_id: "role-backend",
-          target_role_title: "Backend Developer",
-          location: "New York, NY",
-          salary_range: "$130,000 - $160,000",
-          status: "Screening",
-          application_date: "2026-10-18",
-          interview_date: "2026-10-30",
-          outcome_notes: "Recruiter call scheduled for next Tuesday.",
-          match_score: 64.0,
-        },
-        {
-          id: "app-4",
-          user_id: "usr-demo-01",
-          company: "Linear",
-          job_title: "Full Stack Product Engineer",
-          target_role_id: "role-fullstack",
-          target_role_title: "Full Stack Developer",
-          location: "Remote",
-          salary_range: "$140,000 - $170,000",
-          status: "Applied",
-          application_date: "2026-10-25",
-          interview_date: null,
-          outcome_notes: "Application submitted with customized portfolio project link.",
-          match_score: 78.0,
-        },
-      ]);
+      setApplications([]);
+      setAnalytics(null);
+      setLoadError(e instanceof Error ? e.message : "Could not load your applications.");
     } finally {
       setLoading(false);
     }
@@ -154,15 +98,15 @@ export default function ApplicationsPage() {
     setSubmitting(true);
     try {
       await createApplication({
-        user_id: "usr-demo-01",
+        user_id: getCurrentUserId(),
         company,
         job_title: jobTitle,
+        target_role_id: getCurrentTargetRoleId(),
         location,
         salary_range: salaryRange,
         status,
         application_date: appDate,
         job_description: jobDesc,
-        match_score: 75.0,
       });
       setShowModal(false);
       setCompany("");
@@ -180,6 +124,10 @@ export default function ApplicationsPage() {
     filterStatus === "all"
       ? applications
       : applications.filter((a) => a.status === filterStatus);
+  const scoredApplications = applications.filter((application) => application.match_score != null);
+  const averageMatch = scoredApplications.length
+    ? (scoredApplications.reduce((total, application) => total + (application.match_score || 0), 0) / scoredApplications.length).toFixed(1)
+    : "—";
 
   const getStatusBadge = (st: string) => {
     switch (st) {
@@ -215,6 +163,8 @@ export default function ApplicationsPage() {
           </p>
         </div>
 
+        {loadError && <p role="alert" className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">{loadError}</p>}
+
         <button
           onClick={() => setShowModal(true)}
           className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold text-xs flex items-center gap-2 shadow-lg shadow-blue-500/20 transition-all self-start md:self-auto"
@@ -235,7 +185,7 @@ export default function ApplicationsPage() {
         <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-1">
           <span className="text-[10px] text-slate-400 uppercase font-semibold">Interview Rate</span>
           <p className="text-2xl font-black text-emerald-400">
-            {analytics?.interview_conversion_rate ?? 60.0}%
+            {analytics?.interview_conversion_rate ?? 0}%
           </p>
           <span className="text-[10px] text-slate-500">Screening/Round conversion</span>
         </div>
@@ -252,7 +202,7 @@ export default function ApplicationsPage() {
 
         <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-1">
           <span className="text-[10px] text-slate-400 uppercase font-semibold">Average Match</span>
-          <p className="text-2xl font-black text-blue-400">78.8%</p>
+          <p className="text-2xl font-black text-blue-400">{averageMatch}{averageMatch !== "—" ? "%" : ""}</p>
           <span className="text-[10px] text-slate-500">Model 2 similarity score</span>
         </div>
       </div>

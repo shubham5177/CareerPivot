@@ -33,9 +33,11 @@ export default function DashboardPage() {
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [analytics, setAnalytics] = useState<ApplicationAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   const loadData = async () => {
     setLoading(true);
+    setError("");
     try {
       const sum = await fetchDashboardSummary();
       setSummary(sum);
@@ -43,42 +45,9 @@ export default function DashboardPage() {
       setAnalytics(appStats);
     } catch (e) {
       console.error("Dashboard fetch error:", e);
-      // Fallback data for seamless experience
-      setSummary({
-        user_name: "Alex Rivera",
-        current_title: "Junior Software Developer",
-        target_role_title: "Full Stack Developer",
-        resume_match_score: 68.5,
-        total_skills_detected: 8,
-        missing_skills_count: 5,
-        roadmap_progress_percentage: 37.5,
-        completed_roadmap_weeks: 3,
-        total_roadmap_weeks: 8,
-        average_interview_score: 84.5,
-        total_interviews_taken: 2,
-        active_applications_count: 4,
-        total_applications_count: 5,
-        recommended_next_steps: [
-          {
-            title: "Complete Week 4 Roadmap Task",
-            description: "Finish backend API authentication and rate limiting tasks.",
-            action_url: "/roadmap",
-            type: "roadmap",
-          },
-          {
-            title: "Bridge Key Essential Skill Gap",
-            description: "Master TypeScript & PostgreSQL to boost match score beyond 80%.",
-            action_url: "/skill-gap",
-            type: "skill",
-          },
-          {
-            title: "Take a Mock Interview",
-            description: "Practice system design & React state questions before screening.",
-            action_url: "/interview",
-            type: "interview",
-          },
-        ],
-      });
+      setSummary(null);
+      setAnalytics(null);
+      setError(e instanceof Error ? e.message : "Could not load dashboard data.");
     } finally {
       setLoading(false);
     }
@@ -88,19 +57,13 @@ export default function DashboardPage() {
     loadData();
   }, []);
 
-  const funnelData = analytics?.timeline_stats || [
-    { stage: "Wishlist", count: 1 },
-    { stage: "Applied", count: 1 },
-    { stage: "Interviewing", count: 3 },
-    { stage: "Offers", count: 0 },
-  ];
+  const funnelData = analytics?.timeline_stats || [];
 
-  const matchScore = summary?.resume_match_score || 68.5;
-  const matchColor = matchScore >= 80 ? "#10B981" : matchScore >= 60 ? "#3B82F6" : "#F43F5E";
+  const matchScore = summary?.resume_match_score ?? 0;
 
   const pieData = [
-    { name: "Matched Skills", value: summary?.total_skills_detected || 8, color: "#3B82F6" },
-    { name: "Skill Gaps", value: summary?.missing_skills_count || 5, color: "#8B5CF6" },
+    { name: "Matched Skills", value: summary?.total_skills_detected ?? 0, color: "#3B82F6" },
+    { name: "Skill Gaps", value: summary?.missing_skills_count ?? 0, color: "#8B5CF6" },
   ];
 
   return (
@@ -110,7 +73,7 @@ export default function DashboardPage() {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl lg:text-3xl font-extrabold text-white">
-              Welcome back, {summary?.user_name || "Alex"}
+              Welcome back, {summary?.user_name || "there"}
             </h1>
             <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20">
               Active Transition
@@ -121,6 +84,8 @@ export default function DashboardPage() {
             <span className="text-blue-400 font-semibold">{summary?.target_role_title}</span>
           </p>
         </div>
+
+        {error && <p role="alert" className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">{error}</p>}
 
         <div className="flex items-center gap-3">
           <button
@@ -138,34 +103,6 @@ export default function DashboardPage() {
             <ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>
-      </div>
-
-      {/* 10-Step Journey Status Strip */}
-      <div className="p-3.5 rounded-xl bg-slate-900/50 border border-slate-800 flex items-center justify-between text-xs overflow-x-auto scrollbar-thin">
-        <div className="flex items-center gap-2 text-[11px] shrink-0 font-medium text-slate-400">
-          <span className="font-bold text-white flex items-center gap-1">
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Workflow:</span>
-          </span>
-          <Link href="/profile" className="text-emerald-400 hover:underline">1. Profile ✓</Link>
-          <span className="text-slate-600">→</span>
-          <Link href="/resume" className="text-emerald-400 hover:underline">2. Resume ✓</Link>
-          <span className="text-slate-600">→</span>
-          <Link href="/career" className="text-emerald-400 hover:underline">3. Role ✓</Link>
-          <span className="text-slate-600">→</span>
-          <Link href="/skill-gap" className="text-blue-400 font-semibold hover:underline">4. Skill Gap Matrix</Link>
-          <span className="text-slate-600">→</span>
-          <Link href="/roadmap" className="text-blue-400 font-semibold hover:underline">5. Roadmap ({summary?.roadmap_progress_percentage || 37.5}%)</Link>
-          <span className="text-slate-600">→</span>
-          <Link href="/projects" className="text-slate-300 hover:underline">6. Projects</Link>
-          <span className="text-slate-600">→</span>
-          <Link href="/interview" className="text-slate-300 hover:underline">7. Mock Interview</Link>
-          <span className="text-slate-600">→</span>
-          <Link href="/applications" className="text-slate-300 hover:underline">8. Job Tracker</Link>
-        </div>
-        <Link href="/profile" className="text-[11px] text-blue-400 hover:underline font-semibold shrink-0 ml-4">
-          Edit Profile →
-        </Link>
       </div>
 
       {/* 4 Key Metric Cards */}
@@ -191,7 +128,7 @@ export default function DashboardPage() {
             />
           </div>
           <p className="text-[11px] text-slate-400 mt-2">
-            {matchScore >= 80 ? "Interview ready tier" : "Strong pivot baseline"}
+            {matchScore >= 80 ? "Interview ready tier" : matchScore > 0 ? "Keep building your readiness" : "Run a skill analysis to get started"}
           </p>
         </div>
 
@@ -204,11 +141,11 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-black text-white">{summary?.total_skills_detected ?? 8}</span>
-            <span className="text-xs text-slate-400">/ {summary?.missing_skills_count ?? 5} gaps remaining</span>
+            <span className="text-3xl font-black text-white">{summary?.total_skills_detected ?? 0}</span>
+            <span className="text-xs text-slate-400">/ {summary?.missing_skills_count ?? 0} gaps remaining</span>
           </div>
           <div className="mt-3 flex items-center gap-2 text-xs">
-            <span className="text-emerald-400 font-semibold">{summary?.total_skills_detected ?? 8} Verified</span>
+            <span className="text-emerald-400 font-semibold">{summary?.total_skills_detected ?? 0} Skills</span>
             <span className="text-slate-600">•</span>
             <Link href="/skill-gap" className="text-indigo-400 hover:underline">
               View Matrix →
@@ -226,19 +163,19 @@ export default function DashboardPage() {
           </div>
           <div className="mt-3 flex items-baseline gap-2">
             <span className="text-3xl font-black text-white">
-              {summary?.roadmap_progress_percentage ?? 37.5}%
+              {summary?.roadmap_progress_percentage ?? 0}%
             </span>
             <span className="text-xs text-slate-400">
-              Week {summary?.completed_roadmap_weeks ?? 3} of {summary?.total_roadmap_weeks ?? 8}
+              {summary?.total_roadmap_weeks ? `Week ${summary.completed_roadmap_weeks} of ${summary.total_roadmap_weeks}` : "No roadmap started"}
             </span>
           </div>
           <div className="mt-3 w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
             <div
               className="h-full rounded-full transition-all duration-1000 bg-gradient-to-r from-emerald-500 to-teal-400"
-              style={{ width: `${summary?.roadmap_progress_percentage ?? 37.5}%` }}
+              style={{ width: `${summary?.roadmap_progress_percentage ?? 0}%` }}
             />
           </div>
-          <p className="text-[11px] text-slate-400 mt-2">Week 4 module currently in progress</p>
+          <p className="text-[11px] text-slate-400 mt-2">Progress updates as you complete roadmap tasks</p>
         </div>
 
         {/* Metric 4: Interview Performance */}
@@ -251,14 +188,14 @@ export default function DashboardPage() {
           </div>
           <div className="mt-3 flex items-baseline gap-2">
             <span className="text-3xl font-black text-white">
-              {summary?.average_interview_score ?? 84.5}
+              {summary?.average_interview_score ?? 0}
             </span>
             <span className="text-xs font-medium text-purple-400 bg-purple-500/10 px-1.5 py-0.5 rounded">
-              Proficient
+              {summary?.total_interviews_taken ? "Average score" : "No sessions yet"}
             </span>
           </div>
           <div className="mt-3 flex items-center justify-between text-xs text-slate-400">
-            <span>{summary?.total_interviews_taken ?? 2} sessions evaluated</span>
+            <span>{summary?.total_interviews_taken ?? 0} sessions evaluated</span>
             <Link href="/interview" className="text-blue-400 hover:underline">
               Practice →
             </Link>
@@ -274,7 +211,7 @@ export default function DashboardPage() {
             <div>
               <h3 className="text-base font-bold text-white">Active Job Search Funnel</h3>
               <p className="text-xs text-slate-400 mt-0.5">
-                Conversion tracking across {analytics?.total_applications ?? 5} tracked opportunities
+                Conversion tracking across {analytics?.total_applications ?? 0} tracked opportunities
               </p>
             </div>
             <Link
@@ -314,16 +251,16 @@ export default function DashboardPage() {
             <div>
               <span className="block text-slate-500 text-[10px]">Interview Conversion</span>
               <span className="font-bold text-white text-sm">
-                {analytics?.interview_conversion_rate ?? 60.0}%
+                {analytics?.interview_conversion_rate ?? 0}%
               </span>
             </div>
             <div>
               <span className="block text-slate-500 text-[10px]">Screenings Active</span>
-              <span className="font-bold text-cyan-400 text-sm">3 Roles</span>
+              <span className="font-bold text-cyan-400 text-sm">{analytics?.interview_count ?? 0}</span>
             </div>
             <div>
               <span className="block text-slate-500 text-[10px]">Response Velocity</span>
-              <span className="font-bold text-emerald-400 text-sm">High (Top 15%)</span>
+              <span className="font-bold text-emerald-400 text-sm">{analytics?.offer_count ?? 0} offers</span>
             </div>
           </div>
         </div>
@@ -370,14 +307,14 @@ export default function DashboardPage() {
                 <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
                 <span className="text-slate-300">Verified Resume Skills</span>
               </div>
-              <span className="font-bold text-white">{summary?.total_skills_detected ?? 8}</span>
+              <span className="font-bold text-white">{summary?.total_skills_detected ?? 0}</span>
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-purple-500" />
                 <span className="text-slate-300">Required Skills to Master</span>
               </div>
-              <span className="font-bold text-purple-400">{summary?.missing_skills_count ?? 5}</span>
+              <span className="font-bold text-purple-400">{summary?.missing_skills_count ?? 0}</span>
             </div>
           </div>
         </div>

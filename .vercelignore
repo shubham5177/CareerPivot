@@ -1,0 +1,6 @@
+.venv
+frontend
+ml-service/datasets
+ml-service/training
+docs
+careerpivot.db

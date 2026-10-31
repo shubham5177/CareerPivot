@@ -1,17 +1,3 @@
-export interface UserProfile {
-  id: string;
-  name: string;
-  email: string;
-  current_title: string;
-  years_of_experience: number;
-  target_role_id?: string;
-  target_role_title?: string;
-  education?: string;
-  current_skills: string[];
-  bio?: string;
-  created_at?: string;
-}
-
 export interface JobRole {
   id: string;
   title: string;
@@ -21,6 +7,21 @@ export interface JobRole {
   demand_level: string;
   is_custom: number;
   skills?: string[];
+}
+
+export interface UserProfile {
+  id: string;
+  name: string;
+  email: string;
+  current_title?: string | null;
+  years_of_experience: number;
+  target_role_id?: string | null;
+  target_role_title?: string | null;
+  bio?: string | null;
+  education: string[];
+  current_skills: string[];
+  experience: string[];
+  career_interests: string[];
 }
 
 export interface ExtractedSkill {
@@ -40,6 +41,7 @@ export interface ResumeData {
   education: Array<{ degree: string; institution?: string; year?: string }>;
   experience: Array<{ role: string; company?: string; duration?: string; description?: string }>;
   projects: Array<{ name: string; technologies?: string; description?: string }>;
+  certifications: string[];
   extracted_skills: ExtractedSkill[];
 }
 

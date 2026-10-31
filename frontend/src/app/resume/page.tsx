@@ -16,8 +16,9 @@ import {
   GraduationCap,
   Briefcase,
   Layers,
+  Award,
 } from "lucide-react";
-import { parseResumeUpload, saveResume } from "@/lib/api";
+import { getCurrentUserId, parseResumeUpload, saveResume } from "@/lib/api";
 import { ResumeData, ExtractedSkill } from "@/types";
 import { getCategoryBadgeColor } from "@/lib/utils";
 
@@ -30,47 +31,7 @@ export default function ResumePage() {
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   // Resume parsed state
-  const [resumeData, setResumeData] = useState<ResumeData | null>({
-    filename: "alex_rivera_resume.pdf",
-    file_type: "pdf",
-    raw_text: "",
-    clean_text: "",
-    candidate_name: "Alex Rivera",
-    email: "alex.rivera@example.com",
-    phone: "(555) 234-5678",
-    education: [
-      {
-        degree: "B.S. in Computer Science",
-        institution: "State University",
-        year: "2020 - 2024",
-      },
-    ],
-    experience: [
-      {
-        role: "Junior Web Developer",
-        company: "TechNova",
-        duration: "2024 - Present",
-        description:
-          "Developed responsive landing pages using React and Tailwind CSS. Integrated RESTful APIs with frontend client components.",
-      },
-    ],
-    projects: [
-      {
-        name: "E-Commerce Catalog",
-        technologies: "React, Tailwind, Node.js",
-        description: "Built dynamic product filtering, shopping cart, and search indexing.",
-      },
-    ],
-    extracted_skills: [
-      { name: "JavaScript", category: "programming", confidence: 0.95 },
-      { name: "React", category: "frontend", confidence: 0.98 },
-      { name: "HTML5 & CSS3", category: "frontend", confidence: 0.94 },
-      { name: "Tailwind CSS", category: "frontend", confidence: 0.92 },
-      { name: "RESTful APIs", category: "backend", confidence: 0.88 },
-      { name: "SQL", category: "database", confidence: 0.82 },
-      { name: "Problem Solving & Algorithmic Thinking", category: "soft_skills", confidence: 0.85 },
-    ],
-  });
+  const [resumeData, setResumeData] = useState<ResumeData | null>(null);
 
   const [newSkillName, setNewSkillName] = useState("");
   const [newSkillCategory, setNewSkillCategory] = useState("frontend");
@@ -134,12 +95,63 @@ export default function ResumePage() {
     setResumeData(updated);
   };
 
+  const updateExperience = (
+    index: number,
+    field: "role" | "company" | "duration" | "description",
+    value: string
+  ) => {
+    setResumeData((current) =>
+      current
+        ? {
+            ...current,
+            experience: current.experience.map((item, itemIndex) =>
+              itemIndex === index ? { ...item, [field]: value } : item
+            ),
+          }
+        : current
+    );
+  };
+
+  const updateEducation = (
+    index: number,
+    field: "degree" | "institution" | "year",
+    value: string
+  ) => {
+    setResumeData((current) =>
+      current
+        ? {
+            ...current,
+            education: current.education.map((item, itemIndex) =>
+              itemIndex === index ? { ...item, [field]: value } : item
+            ),
+          }
+        : current
+    );
+  };
+
+  const updateProject = (
+    index: number,
+    field: "name" | "technologies" | "description",
+    value: string
+  ) => {
+    setResumeData((current) =>
+      current
+        ? {
+            ...current,
+            projects: current.projects.map((item, itemIndex) =>
+              itemIndex === index ? { ...item, [field]: value } : item
+            ),
+          }
+        : current
+    );
+  };
+
   const handleSaveToDb = async () => {
     if (!resumeData) return;
     setLoading(true);
     try {
       await saveResume({
-        user_id: "usr-demo-01",
+        user_id: getCurrentUserId(),
         filename: resumeData.filename || "custom_resume.pdf",
         file_type: resumeData.file_type || "pdf",
         raw_text: resumeData.raw_text || resumeData.clean_text || "Resume text",
@@ -147,6 +159,7 @@ export default function ResumePage() {
         education: resumeData.education || [],
         experience: resumeData.experience || [],
         projects: resumeData.projects || [],
+        certifications: resumeData.certifications || [],
         extracted_skills: resumeData.extracted_skills.map((s) => s.name),
       });
       setSuccessMsg("Resume information and skills saved to your CareerPivot profile!");
@@ -389,13 +402,36 @@ export default function ResumePage() {
               </div>
               <div className="space-y-4">
                 {resumeData.experience.map((exp, idx) => (
-                  <div key={idx} className="space-y-1 text-xs">
-                    <div className="flex items-center justify-between">
-                      <span className="font-semibold text-white">{exp.role}</span>
-                      <span className="text-slate-500">{exp.duration}</span>
-                    </div>
-                    {exp.company && <p className="text-blue-400 font-medium">{exp.company}</p>}
-                    <p className="text-slate-400 leading-relaxed pt-1">{exp.description}</p>
+                  <div key={idx} className="space-y-2 text-xs">
+                  <div className="grid grid-cols-2 gap-2">
+                    <input
+                      aria-label={`Experience ${idx + 1} role`}
+                      value={exp.role}
+                      onChange={(event) => updateExperience(idx, "role", event.target.value)}
+                      className="rounded bg-slate-950 border border-slate-800 px-2 py-1 font-semibold text-white"
+                    />
+                    <input
+                      aria-label={`Experience ${idx + 1} duration`}
+                      value={exp.duration || ""}
+                      onChange={(event) => updateExperience(idx, "duration", event.target.value)}
+                      className="rounded bg-slate-950 border border-slate-800 px-2 py-1 text-slate-400"
+                    />
+                  </div>
+                  <input
+                    aria-label={`Experience ${idx + 1} company`}
+                    value={exp.company || ""}
+                    onChange={(event) => updateExperience(idx, "company", event.target.value)}
+                    placeholder="Company"
+                    className="w-full rounded bg-slate-950 border border-slate-800 px-2 py-1 text-blue-400"
+                  />
+                  <textarea
+                    aria-label={`Experience ${idx + 1} description`}
+                    value={exp.description || ""}
+                    onChange={(event) => updateExperience(idx, "description", event.target.value)}
+                    rows={2}
+                    placeholder="Description"
+                    className="w-full rounded bg-slate-950 border border-slate-800 px-2 py-1 text-slate-400"
+                  />
                   </div>
                 ))}
               </div>
@@ -411,15 +447,66 @@ export default function ResumePage() {
                 </div>
                 <div className="space-y-3">
                   {resumeData.education.map((edu, idx) => (
-                    <div key={idx} className="text-xs space-y-0.5">
-                      <div className="flex items-center justify-between">
-                        <span className="font-semibold text-white">{edu.degree}</span>
-                        <span className="text-slate-500">{edu.year}</span>
+                    <div key={idx} className="text-xs space-y-2">
+                      <div className="grid grid-cols-2 gap-2">
+                        <input
+                          aria-label={`Education ${idx + 1} degree`}
+                          value={edu.degree}
+                          onChange={(event) => updateEducation(idx, "degree", event.target.value)}
+                          className="rounded bg-slate-950 border border-slate-800 px-2 py-1 font-semibold text-white"
+                        />
+                        <input
+                          aria-label={`Education ${idx + 1} year`}
+                          value={edu.year || ""}
+                          onChange={(event) => updateEducation(idx, "year", event.target.value)}
+                          className="rounded bg-slate-950 border border-slate-800 px-2 py-1 text-slate-400"
+                        />
                       </div>
-                      <p className="text-slate-400">{edu.institution}</p>
+                      <input
+                        aria-label={`Education ${idx + 1} institution`}
+                        value={edu.institution || ""}
+                        onChange={(event) => updateEducation(idx, "institution", event.target.value)}
+                        placeholder="Institution"
+                        className="w-full rounded bg-slate-950 border border-slate-800 px-2 py-1 text-slate-400"
+                      />
                     </div>
                   ))}
                 </div>
+              </div>
+
+              {/* Certifications */}
+              <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-4">
+                <div className="flex items-center gap-2 text-white font-bold text-sm border-b border-slate-800 pb-3">
+                  <Award className="w-4 h-4 text-amber-400" />
+                  <span>Certifications</span>
+                </div>
+                {resumeData.certifications.length ? (
+                  <ul className="space-y-2">
+                    {resumeData.certifications.map((certification, idx) => (
+                      <li key={idx}>
+                        <input
+                          aria-label={`Certification ${idx + 1}`}
+                          value={certification}
+                          onChange={(event) =>
+                            setResumeData((current) =>
+                              current
+                                ? {
+                                    ...current,
+                                    certifications: current.certifications.map((item, itemIndex) =>
+                                      itemIndex === idx ? event.target.value : item
+                                    ),
+                                  }
+                                : current
+                            )
+                          }
+                          className="w-full rounded bg-slate-950 border border-slate-800 px-2 py-1 text-xs text-slate-300"
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-xs text-slate-500">No certifications found in this resume.</p>
+                )}
               </div>
 
               {/* Projects */}
@@ -430,12 +517,28 @@ export default function ResumePage() {
                 </div>
                 <div className="space-y-3">
                   {resumeData.projects.map((proj, idx) => (
-                    <div key={idx} className="text-xs space-y-1">
-                      <span className="font-semibold text-white">{proj.name}</span>
-                      {proj.technologies && (
-                        <p className="text-indigo-400 text-[11px] font-mono">{proj.technologies}</p>
-                      )}
-                      <p className="text-slate-400 leading-relaxed">{proj.description}</p>
+                    <div key={idx} className="text-xs space-y-2">
+                      <input
+                        aria-label={`Project ${idx + 1} name`}
+                        value={proj.name}
+                        onChange={(event) => updateProject(idx, "name", event.target.value)}
+                        className="w-full rounded bg-slate-950 border border-slate-800 px-2 py-1 font-semibold text-white"
+                      />
+                      <input
+                        aria-label={`Project ${idx + 1} technologies`}
+                        value={proj.technologies || ""}
+                        onChange={(event) => updateProject(idx, "technologies", event.target.value)}
+                        placeholder="Technologies"
+                        className="w-full rounded bg-slate-950 border border-slate-800 px-2 py-1 text-indigo-400 font-mono"
+                      />
+                      <textarea
+                        aria-label={`Project ${idx + 1} description`}
+                        value={proj.description || ""}
+                        onChange={(event) => updateProject(idx, "description", event.target.value)}
+                        rows={2}
+                        placeholder="Description"
+                        className="w-full rounded bg-slate-950 border border-slate-800 px-2 py-1 text-slate-400"
+                      />
                     </div>
                   ))}
                 </div>
