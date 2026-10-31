@@ -1,0 +1,433 @@
+text,category
+React,frontend
+Proficient in react,frontend
+Experienced with react,frontend
+React.js,frontend
+Proficient in react.js,frontend
+Experienced with react.js,frontend
+Next.js,frontend
+Proficient in next.js,frontend
+Experienced with next.js,frontend
+Vue.js,frontend
+Proficient in vue.js,frontend
+Experienced with vue.js,frontend
+Angular,frontend
+Proficient in angular,frontend
+Experienced with angular,frontend
+Svelte,frontend
+Proficient in svelte,frontend
+Experienced with svelte,frontend
+Tailwind CSS,frontend
+Proficient in tailwind css,frontend
+Experienced with tailwind css,frontend
+Bootstrap,frontend
+Proficient in bootstrap,frontend
+Experienced with bootstrap,frontend
+HTML5 semantic layout,frontend
+Proficient in html5 semantic layout,frontend
+Experienced with html5 semantic layout,frontend
+CSS3 animations and Grid,frontend
+Proficient in css3 animations and grid,frontend
+Experienced with css3 animations and grid,frontend
+Redux Toolkit,frontend
+Proficient in redux toolkit,frontend
+Experienced with redux toolkit,frontend
+Zustand state management,frontend
+Proficient in zustand state management,frontend
+Experienced with zustand state management,frontend
+Web Accessibility WCAG,frontend
+Proficient in web accessibility wcag,frontend
+Experienced with web accessibility wcag,frontend
+Responsive Web Design,frontend
+Proficient in responsive web design,frontend
+Experienced with responsive web design,frontend
+Vite bundler,frontend
+Proficient in vite bundler,frontend
+Experienced with vite bundler,frontend
+Webpack configuration,frontend
+Proficient in webpack configuration,frontend
+Experienced with webpack configuration,frontend
+Sass SCSS preprocessing,frontend
+Proficient in sass scss preprocessing,frontend
+Experienced with sass scss preprocessing,frontend
+DOM manipulation,frontend
+Proficient in dom manipulation,frontend
+Experienced with dom manipulation,frontend
+Figma to code translation,frontend
+Proficient in figma to code translation,frontend
+Experienced with figma to code translation,frontend
+Single Page Applications SPA,frontend
+Proficient in single page applications spa,frontend
+Experienced with single page applications spa,frontend
+React Native,frontend
+Proficient in react native,frontend
+Experienced with react native,frontend
+Storybook UI components,frontend
+Proficient in storybook ui components,frontend
+Experienced with storybook ui components,frontend
+Frontend Performance Optimization,frontend
+Proficient in frontend performance optimization,frontend
+Experienced with frontend performance optimization,frontend
+Shadow DOM,frontend
+Proficient in shadow dom,frontend
+Experienced with shadow dom,frontend
+Client-side routing,frontend
+Proficient in client-side routing,frontend
+Experienced with client-side routing,frontend
+Progressive Web Apps PWA,frontend
+Proficient in progressive web apps pwa,frontend
+Experienced with progressive web apps pwa,frontend
+FastAPI,backend
+Proficient in fastapi,backend
+Experienced with fastapi,backend
+Node.js,backend
+Proficient in node.js,backend
+Experienced with node.js,backend
+Express.js,backend
+Proficient in express.js,backend
+Experienced with express.js,backend
+Django,backend
+Proficient in django,backend
+Experienced with django,backend
+Flask microframework,backend
+Proficient in flask microframework,backend
+Experienced with flask microframework,backend
+Spring Boot,backend
+Proficient in spring boot,backend
+Experienced with spring boot,backend
+ASP.NET Core,backend
+Proficient in asp.net core,backend
+Experienced with asp.net core,backend
+RESTful API design,backend
+Proficient in restful api design,backend
+Experienced with restful api design,backend
+GraphQL query schemas,backend
+Proficient in graphql query schemas,backend
+Experienced with graphql query schemas,backend
+gRPC protocols,backend
+Proficient in grpc protocols,backend
+Experienced with grpc protocols,backend
+Microservices architecture,backend
+Proficient in microservices architecture,backend
+Experienced with microservices architecture,backend
+Celery distributed task queue,backend
+Proficient in celery distributed task queue,backend
+Experienced with celery distributed task queue,backend
+Serverless functions,backend
+Proficient in serverless functions,backend
+Experienced with serverless functions,backend
+WebSockets real-time communication,backend
+Proficient in websockets real-time communication,backend
+Experienced with websockets real-time communication,backend
+API Gateway rate limiting,backend
+Proficient in api gateway rate limiting,backend
+Experienced with api gateway rate limiting,backend
+OAuth2 authentication,backend
+Proficient in oauth2 authentication,backend
+Experienced with oauth2 authentication,backend
+JWT tokens,backend
+Proficient in jwt tokens,backend
+Experienced with jwt tokens,backend
+Backend caching strategies,backend
+Proficient in backend caching strategies,backend
+Experienced with backend caching strategies,backend
+Message queues RabbitMQ,backend
+Proficient in message queues rabbitmq,backend
+Experienced with message queues rabbitmq,backend
+Kafka event streams,backend
+Proficient in kafka event streams,backend
+Experienced with kafka event streams,backend
+Middleware pipeline,backend
+Proficient in middleware pipeline,backend
+Experienced with middleware pipeline,backend
+Asynchronous I/O asyncio,backend
+Proficient in asynchronous i/o asyncio,backend
+Experienced with asynchronous i/o asyncio,backend
+Event-driven architecture,backend
+Proficient in event-driven architecture,backend
+Experienced with event-driven architecture,backend
+SQL queries,database
+Proficient in sql queries,database
+Experienced with sql queries,database
+PostgreSQL relational database,database
+Proficient in postgresql relational database,database
+Experienced with postgresql relational database,database
+MySQL,database
+Proficient in mysql,database
+Experienced with mysql,database
+MongoDB document store,database
+Proficient in mongodb document store,database
+Experienced with mongodb document store,database
+Redis in-memory caching,database
+Proficient in redis in-memory caching,database
+Experienced with redis in-memory caching,database
+SQLite database,database
+Proficient in sqlite database,database
+Experienced with sqlite database,database
+Database indexing B-tree,database
+Proficient in database indexing b-tree,database
+Experienced with database indexing b-tree,database
+ACID transactions,database
+Proficient in acid transactions,database
+Experienced with acid transactions,database
+Cassandra NoSQL,database
+Proficient in cassandra nosql,database
+Experienced with cassandra nosql,database
+DynamoDB serverless database,database
+Proficient in dynamodb serverless database,database
+Experienced with dynamodb serverless database,database
+Prisma ORM,database
+Proficient in prisma orm,database
+Experienced with prisma orm,database
+SQLAlchemy ORM,database
+Proficient in sqlalchemy orm,database
+Experienced with sqlalchemy orm,database
+Database schema normalization,database
+Proficient in database schema normalization,database
+Experienced with database schema normalization,database
+Query optimization EXPLAIN ANALYZE,database
+Proficient in query optimization explain analyze,database
+Experienced with query optimization explain analyze,database
+Data warehousing Snowflake,database
+Proficient in data warehousing snowflake,database
+Experienced with data warehousing snowflake,database
+Elasticsearch full-text search,database
+Proficient in elasticsearch full-text search,database
+Experienced with elasticsearch full-text search,database
+Neo4j graph database,database
+Proficient in neo4j graph database,database
+Experienced with neo4j graph database,database
+Database migrations Alembic,database
+Proficient in database migrations alembic,database
+Experienced with database migrations alembic,database
+Database connection pooling,database
+Proficient in database connection pooling,database
+Experienced with database connection pooling,database
+Docker containerization,cloud
+Proficient in docker containerization,cloud
+Experienced with docker containerization,cloud
+Kubernetes cluster orchestration,cloud
+Proficient in kubernetes cluster orchestration,cloud
+Experienced with kubernetes cluster orchestration,cloud
+AWS EC2 and S3,cloud
+Proficient in aws ec2 and s3,cloud
+Experienced with aws ec2 and s3,cloud
+AWS Lambda serverless,cloud
+Proficient in aws lambda serverless,cloud
+Experienced with aws lambda serverless,cloud
+Google Cloud Platform GCP,cloud
+Proficient in google cloud platform gcp,cloud
+Experienced with google cloud platform gcp,cloud
+Microsoft Azure,cloud
+Proficient in microsoft azure,cloud
+Experienced with microsoft azure,cloud
+Terraform Infrastructure as Code,cloud
+Proficient in terraform infrastructure as code,cloud
+Experienced with terraform infrastructure as code,cloud
+CI/CD GitHub Actions,cloud
+Proficient in ci/cd github actions,cloud
+Experienced with ci/cd github actions,cloud
+GitLab CI,cloud
+Proficient in gitlab ci,cloud
+Experienced with gitlab ci,cloud
+Helm charts Kubernetes,cloud
+Proficient in helm charts kubernetes,cloud
+Experienced with helm charts kubernetes,cloud
+Prometheus and Grafana monitoring,cloud
+Proficient in prometheus and grafana monitoring,cloud
+Experienced with prometheus and grafana monitoring,cloud
+Nginx reverse proxy,cloud
+Proficient in nginx reverse proxy,cloud
+Experienced with nginx reverse proxy,cloud
+CloudFormation templates,cloud
+Proficient in cloudformation templates,cloud
+Experienced with cloudformation templates,cloud
+Container registry ECR,cloud
+Proficient in container registry ecr,cloud
+Experienced with container registry ecr,cloud
+Linux bash shell scripting,cloud
+Proficient in linux bash shell scripting,cloud
+Experienced with linux bash shell scripting,cloud
+Site Reliability Engineering SRE,cloud
+Proficient in site reliability engineering sre,cloud
+Experienced with site reliability engineering sre,cloud
+Load balancer routing,cloud
+Proficient in load balancer routing,cloud
+Experienced with load balancer routing,cloud
+ArgoCD GitOps,cloud
+Proficient in argocd gitops,cloud
+Experienced with argocd gitops,cloud
+Python programming,programming
+Proficient in python programming,programming
+Experienced with python programming,programming
+TypeScript static typing,programming
+Proficient in typescript static typing,programming
+Experienced with typescript static typing,programming
+JavaScript ES6+,programming
+Proficient in javascript es6+,programming
+Experienced with javascript es6+,programming
+Java object oriented,programming
+Proficient in java object oriented,programming
+Experienced with java object oriented,programming
+Go Golang,programming
+Proficient in go golang,programming
+Experienced with go golang,programming
+Rust memory safety,programming
+Proficient in rust memory safety,programming
+Experienced with rust memory safety,programming
+C++ systems programming,programming
+Proficient in c++ systems programming,programming
+Experienced with c++ systems programming,programming
+C# language,programming
+Proficient in c# language,programming
+Experienced with c# language,programming
+PHP modern,programming
+Proficient in php modern,programming
+Experienced with php modern,programming
+Ruby on Rails,programming
+Proficient in ruby on rails,programming
+Experienced with ruby on rails,programming
+Kotlin Android,programming
+Proficient in kotlin android,programming
+Experienced with kotlin android,programming
+Swift iOS,programming
+Proficient in swift ios,programming
+Experienced with swift ios,programming
+Data structures and algorithms,programming
+Proficient in data structures and algorithms,programming
+Experienced with data structures and algorithms,programming
+Object-oriented design patterns,programming
+Proficient in object-oriented design patterns,programming
+Experienced with object-oriented design patterns,programming
+Functional programming concepts,programming
+Proficient in functional programming concepts,programming
+Experienced with functional programming concepts,programming
+Concurrency and multithreading,programming
+Proficient in concurrency and multithreading,programming
+Experienced with concurrency and multithreading,programming
+Pandas dataframe manipulation,data_ml
+Proficient in pandas dataframe manipulation,data_ml
+Experienced with pandas dataframe manipulation,data_ml
+NumPy array computation,data_ml
+Proficient in numpy array computation,data_ml
+Experienced with numpy array computation,data_ml
+Scikit-Learn machine learning,data_ml
+Proficient in scikit-learn machine learning,data_ml
+Experienced with scikit-learn machine learning,data_ml
+PyTorch deep neural networks,data_ml
+Proficient in pytorch deep neural networks,data_ml
+Experienced with pytorch deep neural networks,data_ml
+TensorFlow Keras,data_ml
+Proficient in tensorflow keras,data_ml
+Experienced with tensorflow keras,data_ml
+Natural Language Processing NLP,data_ml
+Proficient in natural language processing nlp,data_ml
+Experienced with natural language processing nlp,data_ml
+Computer Vision OpenCV,data_ml
+Proficient in computer vision opencv,data_ml
+Experienced with computer vision opencv,data_ml
+Exploratory Data Analysis EDA,data_ml
+Proficient in exploratory data analysis eda,data_ml
+Experienced with exploratory data analysis eda,data_ml
+Feature Engineering,data_ml
+Proficient in feature engineering,data_ml
+Experienced with feature engineering,data_ml
+Supervised classification models,data_ml
+Proficient in supervised classification models,data_ml
+Experienced with supervised classification models,data_ml
+Unsupervised clustering K-Means,data_ml
+Proficient in unsupervised clustering k-means,data_ml
+Experienced with unsupervised clustering k-means,data_ml
+Large Language Models LLMs,data_ml
+Proficient in large language models llms,data_ml
+Experienced with large language models llms,data_ml
+RAG Retrieval Augmented Generation,data_ml
+Proficient in rag retrieval augmented generation,data_ml
+Experienced with rag retrieval augmented generation,data_ml
+Model evaluation metrics ROC AUC,data_ml
+Proficient in model evaluation metrics roc auc,data_ml
+Experienced with model evaluation metrics roc auc,data_ml
+Matplotlib and Seaborn plotting,data_ml
+Proficient in matplotlib and seaborn plotting,data_ml
+Experienced with matplotlib and seaborn plotting,data_ml
+Tableau dashboarding,data_ml
+Proficient in tableau dashboarding,data_ml
+Experienced with tableau dashboarding,data_ml
+PowerBI reports,data_ml
+Proficient in powerbi reports,data_ml
+Experienced with powerbi reports,data_ml
+Vector databases Pinecone Chroma,data_ml
+Proficient in vector databases pinecone chroma,data_ml
+Experienced with vector databases pinecone chroma,data_ml
+Network Security firewalls,security
+Proficient in network security firewalls,security
+Experienced with network security firewalls,security
+Vulnerability scanning Nessus,security
+Proficient in vulnerability scanning nessus,security
+Experienced with vulnerability scanning nessus,security
+Penetration testing Kali Linux,security
+Proficient in penetration testing kali linux,security
+Experienced with penetration testing kali linux,security
+OWASP Top 10 vulnerabilities,security
+Proficient in owasp top 10 vulnerabilities,security
+Experienced with owasp top 10 vulnerabilities,security
+SIEM security monitoring Splunk,security
+Proficient in siem security monitoring splunk,security
+Experienced with siem security monitoring splunk,security
+Cryptography public key PKI,security
+Proficient in cryptography public key pki,security
+Experienced with cryptography public key pki,security
+Incident Response SOC,security
+Proficient in incident response soc,security
+Experienced with incident response soc,security
+Identity and Access Management IAM,security
+Proficient in identity and access management iam,security
+Experienced with identity and access management iam,security
+Ethical Hacking,security
+Proficient in ethical hacking,security
+Experienced with ethical hacking,security
+Zero Trust architecture,security
+Proficient in zero trust architecture,security
+Experienced with zero trust architecture,security
+Threat modeling and risk assessment,security
+Proficient in threat modeling and risk assessment,security
+Experienced with threat modeling and risk assessment,security
+SSL TLS certificates,security
+Proficient in ssl tls certificates,security
+Experienced with ssl tls certificates,security
+Technical leadership and mentoring,soft_skills
+Proficient in technical leadership and mentoring,soft_skills
+Experienced with technical leadership and mentoring,soft_skills
+Agile Scrum sprint planning,soft_skills
+Proficient in agile scrum sprint planning,soft_skills
+Experienced with agile scrum sprint planning,soft_skills
+Cross-functional stakeholder collaboration,soft_skills
+Proficient in cross-functional stakeholder collaboration,soft_skills
+Experienced with cross-functional stakeholder collaboration,soft_skills
+Analytical problem solving,soft_skills
+Proficient in analytical problem solving,soft_skills
+Experienced with analytical problem solving,soft_skills
+Written and verbal communication,soft_skills
+Proficient in written and verbal communication,soft_skills
+Experienced with written and verbal communication,soft_skills
+Time management and prioritization,soft_skills
+Proficient in time management and prioritization,soft_skills
+Experienced with time management and prioritization,soft_skills
+Team code review best practices,soft_skills
+Proficient in team code review best practices,soft_skills
+Experienced with team code review best practices,soft_skills
+Conflict resolution,soft_skills
+Proficient in conflict resolution,soft_skills
+Experienced with conflict resolution,soft_skills
+Product requirement documentation PRD,soft_skills
+Proficient in product requirement documentation prd,soft_skills
+Experienced with product requirement documentation prd,soft_skills
+Critical thinking and empathy,soft_skills
+Proficient in critical thinking and empathy,soft_skills
+Experienced with critical thinking and empathy,soft_skills
+Continuous learning and adaptability,soft_skills
+Proficient in continuous learning and adaptability,soft_skills
+Experienced with continuous learning and adaptability,soft_skills
+Client presentation skills,soft_skills
+Proficient in client presentation skills,soft_skills
+Experienced with client presentation skills,soft_skills

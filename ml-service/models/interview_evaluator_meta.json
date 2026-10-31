@@ -1,0 +1,14 @@
+{
+  "model_name": "interview_evaluator",
+  "algorithm": "TfidfVectorizer + Multinomial Logistic Regression",
+  "tiers": [
+    "insufficient",
+    "developing",
+    "proficient",
+    "exemplary"
+  ],
+  "cv_accuracy_mean": 0.875,
+  "cv_accuracy_std": 0.125,
+  "train_accuracy": 1.0,
+  "n_samples": 32
+}

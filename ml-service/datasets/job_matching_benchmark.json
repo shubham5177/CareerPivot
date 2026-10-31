@@ -1,0 +1,181 @@
+[
+  {
+    "id": "match-01",
+    "resume_skills": [
+      "React",
+      "JavaScript",
+      "TypeScript",
+      "Tailwind CSS",
+      "HTML5",
+      "CSS3",
+      "REST APIs",
+      "Git"
+    ],
+    "job_title": "Frontend Developer",
+    "job_description": "We are seeking a Frontend Engineer proficient in React, TypeScript, Next.js, and modern CSS frameworks like Tailwind. Must be experienced with consuming RESTful APIs and writing testable clean UI components.",
+    "required_skills": [
+      "React",
+      "TypeScript",
+      "Next.js",
+      "Tailwind CSS",
+      "REST APIs"
+    ],
+    "expected_relevance": 0.88,
+    "relevance_tier": "High"
+  },
+  {
+    "id": "match-02",
+    "resume_skills": [
+      "Python",
+      "FastAPI",
+      "PostgreSQL",
+      "SQL",
+      "Docker",
+      "Redis",
+      "REST APIs",
+      "Git"
+    ],
+    "job_title": "Backend Developer",
+    "job_description": "Looking for a Backend Developer to build scalable asynchronous services with Python, FastAPI or Django, PostgreSQL databases, and Redis caching. Experience with Docker and microservices required.",
+    "required_skills": [
+      "Python",
+      "FastAPI",
+      "PostgreSQL",
+      "Redis",
+      "Docker",
+      "REST APIs"
+    ],
+    "expected_relevance": 0.94,
+    "relevance_tier": "High"
+  },
+  {
+    "id": "match-03",
+    "resume_skills": [
+      "HTML5",
+      "CSS3",
+      "Basic JavaScript",
+      "WordPress",
+      "Photoshop"
+    ],
+    "job_title": "Full Stack Developer",
+    "job_description": "Seeking Full Stack Developer to build enterprise web applications with TypeScript, React, Node.js, PostgreSQL, Docker, and AWS cloud deployment.",
+    "required_skills": [
+      "TypeScript",
+      "React",
+      "Node.js",
+      "PostgreSQL",
+      "Docker",
+      "AWS"
+    ],
+    "expected_relevance": 0.28,
+    "relevance_tier": "Low"
+  },
+  {
+    "id": "match-04",
+    "resume_skills": [
+      "Python",
+      "Pandas",
+      "NumPy",
+      "Scikit-Learn",
+      "SQL",
+      "Data Visualization",
+      "Matplotlib"
+    ],
+    "job_title": "Data Scientist",
+    "job_description": "Data Scientist role requiring strong statistical analysis, exploratory data analysis using Pandas and NumPy, predictive modeling with Scikit-Learn, and SQL database querying.",
+    "required_skills": [
+      "Python",
+      "Pandas",
+      "Scikit-Learn",
+      "SQL",
+      "Statistics"
+    ],
+    "expected_relevance": 0.9,
+    "relevance_tier": "High"
+  },
+  {
+    "id": "match-05",
+    "resume_skills": [
+      "AWS",
+      "Terraform",
+      "Docker",
+      "Kubernetes",
+      "CI/CD",
+      "Linux",
+      "Bash",
+      "Python"
+    ],
+    "job_title": "Cloud Engineer",
+    "job_description": "Cloud Engineer wanted to design and maintain automated infrastructure on AWS using Terraform and Docker. Kubernetes container orchestration and CI/CD automation essential.",
+    "required_skills": [
+      "AWS",
+      "Terraform",
+      "Docker",
+      "Kubernetes",
+      "CI/CD Pipelines"
+    ],
+    "expected_relevance": 0.95,
+    "relevance_tier": "High"
+  },
+  {
+    "id": "match-06",
+    "resume_skills": [
+      "React",
+      "CSS",
+      "HTML",
+      "Figma"
+    ],
+    "job_title": "Cybersecurity Analyst",
+    "job_description": "Cybersecurity Analyst to monitor security events, conduct vulnerability assessments with Nessus, configure SIEM tooling (Splunk), and enforce firewall policies.",
+    "required_skills": [
+      "Network Security",
+      "SIEM",
+      "Vulnerability Assessment",
+      "Firewalls"
+    ],
+    "expected_relevance": 0.1,
+    "relevance_tier": "Irrelevant"
+  },
+  {
+    "id": "match-07",
+    "resume_skills": [
+      "Python",
+      "Pandas",
+      "SQL",
+      "Tableau",
+      "Excel",
+      "Data Cleaning"
+    ],
+    "job_title": "Data Analyst",
+    "job_description": "Junior to Mid Data Analyst to write complex SQL aggregations, build executive dashboards in Tableau or PowerBI, and clean large datasets in Python.",
+    "required_skills": [
+      "SQL",
+      "Tableau",
+      "Python",
+      "Data Cleaning",
+      "Excel"
+    ],
+    "expected_relevance": 0.92,
+    "relevance_tier": "High"
+  },
+  {
+    "id": "match-08",
+    "resume_skills": [
+      "Java",
+      "Spring Boot",
+      "MySQL",
+      "REST APIs",
+      "Git"
+    ],
+    "job_title": "Python Developer",
+    "job_description": "Python Developer to create automated data integration workflows and backend microservices with Python, FastAPI/Django, and PostgreSQL.",
+    "required_skills": [
+      "Python",
+      "FastAPI",
+      "PostgreSQL",
+      "REST APIs"
+    ],
+    "expected_relevance": 0.5,
+    "relevance_tier": "Moderate"
+  }
+]

@@ -1,0 +1,18 @@
+{
+  "model_name": "skill_classifier",
+  "algorithm": "TfidfVectorizer + LogisticRegression",
+  "categories": [
+    "backend",
+    "cloud",
+    "data_ml",
+    "database",
+    "frontend",
+    "programming",
+    "security",
+    "soft_skills"
+  ],
+  "test_accuracy": 1.0,
+  "test_f1_macro": 1.0,
+  "test_f1_weighted": 1.0,
+  "n_samples": 432
+}
