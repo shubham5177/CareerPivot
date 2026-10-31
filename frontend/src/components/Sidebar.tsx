@@ -14,11 +14,13 @@ import {
   Sparkles,
   ChevronRight,
   TrendingUp,
+  User,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navigationItems = [
   { name: "Overview", href: "/", icon: Sparkles },
+  { name: "My Profile", href: "/profile", icon: User },
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Resume Analyzer", href: "/resume", icon: FileText, badge: "ML" },
   { name: "Career Selection", href: "/career", icon: Compass },

@@ -28,15 +28,18 @@ export function Navbar() {
         <div className="h-4 w-[1px] bg-slate-800 mx-1" />
 
         {/* User Pill */}
-        <div className="flex items-center gap-2.5 pl-1 pr-3 py-1 bg-slate-900 border border-slate-800 rounded-full">
-          <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500 flex items-center justify-center text-white text-xs font-bold">
+        <Link
+          href="/profile"
+          className="flex items-center gap-2.5 pl-1 pr-3 py-1 bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 rounded-full transition-all group"
+        >
+          <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500 flex items-center justify-center text-white text-xs font-bold shadow-sm">
             AR
           </div>
           <div className="text-left">
-            <p className="text-xs font-semibold text-white leading-none">Alex Rivera</p>
-            <p className="text-[10px] text-slate-400 leading-tight">Full Stack Transition</p>
+            <p className="text-xs font-semibold text-white leading-none group-hover:text-blue-400 transition-colors">Alex Rivera</p>
+            <p className="text-[10px] text-slate-400 leading-tight">Profile & Goals</p>
           </div>
-        </div>
+        </Link>
       </div>
     </header>
   );

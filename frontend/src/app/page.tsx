@@ -14,6 +14,10 @@ import {
   ArrowRight,
   ShieldCheck,
   Zap,
+  User,
+  Compass,
+  LayoutDashboard,
+  Sparkles,
 } from "lucide-react";
 
 export default function HomePage() {
@@ -95,18 +99,18 @@ export default function HomePage() {
 
           <div className="flex flex-wrap items-center gap-4 pt-2">
             <Link
-              href="/dashboard"
+              href="/profile"
               className="px-6 py-3.5 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-semibold text-sm flex items-center gap-2 shadow-lg shadow-indigo-500/25 transition-all"
             >
-              <span>Open Career Dashboard</span>
+              <span>1. Start Registration & Profile</span>
               <ArrowRight className="w-4 h-4" />
             </Link>
             <Link
-              href="/resume"
+              href="/dashboard"
               className="px-6 py-3.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-sm border border-slate-700 transition-all flex items-center gap-2"
             >
-              <FileText className="w-4 h-4 text-blue-400" />
-              <span>Analyze Resume (PDF/DOCX)</span>
+              <LayoutDashboard className="w-4 h-4 text-blue-400" />
+              <span>Career Dashboard</span>
             </Link>
           </div>
 
@@ -164,6 +168,71 @@ export default function HomePage() {
                 <div className="flex items-center gap-1.5 text-xs font-semibold text-blue-400 pt-2 border-t border-slate-800/60 group-hover:translate-x-1 transition-transform">
                   <span>Explore Feature</span>
                   <ArrowRight className="w-3.5 h-3.5" />
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Complete User Workflow Stepper */}
+      <div className="p-8 rounded-3xl bg-slate-900/60 border border-slate-800 space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-4">
+          <div>
+            <span className="text-xs font-bold text-blue-400 bg-blue-500/10 px-2.5 py-0.5 rounded border border-blue-500/20">
+              COMPLETE 10-STEP USER JOURNEY
+            </span>
+            <h2 className="text-2xl font-bold text-white mt-1">From Career Pivot to Job Offer</h2>
+            <p className="text-xs text-slate-400">
+              Registration → Profile Creation → Resume Upload → Resume Analysis → Career Selection → Skill Gap Analysis → Learning Roadmap → Portfolio Projects → Mock Interview → Job Tracking → Progress Dashboard → Updated Recommendations.
+            </p>
+          </div>
+          <Link
+            href="/profile"
+            className="text-xs font-semibold text-blue-400 hover:text-blue-300 flex items-center gap-1 shrink-0 self-start sm:self-auto"
+          >
+            <span>Begin at Step 1 (Profile)</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          {[
+            { step: "1", title: "Registration & Profile", desc: "Enter name, email, education, current skills, & transition goals.", href: "/profile", icon: User },
+            { step: "2", title: "Resume Upload", desc: "Upload PDF or DOCX file for automatic extraction.", href: "/resume", icon: FileText },
+            { step: "3", title: "Target Career Choice", desc: "Select from 9 tech roles or specify custom job criteria.", href: "/career", icon: Compass },
+            { step: "4", title: "Skill Gap Analysis", desc: "Model 2 TF-IDF similarity calculates match score and missing skills.", href: "/skill-gap", icon: BarChart3 },
+            { step: "5", title: "Personalized Roadmap", desc: "Follow dynamic 8-week structured curriculum with tasks & resources.", href: "/roadmap", icon: MapPin },
+            { step: "6", title: "Portfolio Projects", desc: "Build gap-targeted portfolio projects with architectures.", href: "/projects", icon: FolderGit2 },
+            { step: "7", title: "Mock Interview", desc: "Type answers graded by Model 3 with rubrics & missing concepts.", href: "/interview", icon: Mic },
+            { step: "8", title: "Job Application Tracker", desc: "Track opportunities, screening rounds, and conversion metrics.", href: "/applications", icon: Briefcase },
+            { step: "9", title: "Progress Dashboard", desc: "Review unified readiness scores, radar balance, & milestones.", href: "/dashboard", icon: LayoutDashboard },
+            { step: "10", title: "Updated Recommendations", desc: "Adaptive feedback automatically updates based on progress.", href: "/roadmap", icon: Sparkles },
+          ].map((item) => {
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.step}
+                href={item.href}
+                className="p-4 rounded-xl bg-slate-800/40 border border-slate-800 hover:border-blue-500/50 hover:bg-slate-800/80 transition-all flex flex-col justify-between space-y-2 group"
+              >
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-extrabold text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-500/20">
+                      STEP {item.step}
+                    </span>
+                    <Icon className="w-3.5 h-3.5 text-slate-500 group-hover:text-blue-400 transition-colors" />
+                  </div>
+                  <h4 className="text-xs font-bold text-white group-hover:text-blue-300 transition-colors">
+                    {item.title}
+                  </h4>
+                  <p className="text-[11px] text-slate-400 leading-tight">
+                    {item.desc}
+                  </p>
+                </div>
+                <div className="pt-1 text-[10px] font-semibold text-blue-400 group-hover:underline flex items-center gap-0.5">
+                  <span>Launch Step</span>
+                  <ArrowRight className="w-3 h-3" />
                 </div>
               </Link>
             );

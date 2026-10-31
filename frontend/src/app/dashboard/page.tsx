@@ -140,6 +140,34 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* 10-Step Journey Status Strip */}
+      <div className="p-3.5 rounded-xl bg-slate-900/50 border border-slate-800 flex items-center justify-between text-xs overflow-x-auto scrollbar-thin">
+        <div className="flex items-center gap-2 text-[11px] shrink-0 font-medium text-slate-400">
+          <span className="font-bold text-white flex items-center gap-1">
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Workflow:</span>
+          </span>
+          <Link href="/profile" className="text-emerald-400 hover:underline">1. Profile ✓</Link>
+          <span className="text-slate-600">→</span>
+          <Link href="/resume" className="text-emerald-400 hover:underline">2. Resume ✓</Link>
+          <span className="text-slate-600">→</span>
+          <Link href="/career" className="text-emerald-400 hover:underline">3. Role ✓</Link>
+          <span className="text-slate-600">→</span>
+          <Link href="/skill-gap" className="text-blue-400 font-semibold hover:underline">4. Skill Gap Matrix</Link>
+          <span className="text-slate-600">→</span>
+          <Link href="/roadmap" className="text-blue-400 font-semibold hover:underline">5. Roadmap ({summary?.roadmap_progress_percentage || 37.5}%)</Link>
+          <span className="text-slate-600">→</span>
+          <Link href="/projects" className="text-slate-300 hover:underline">6. Projects</Link>
+          <span className="text-slate-600">→</span>
+          <Link href="/interview" className="text-slate-300 hover:underline">7. Mock Interview</Link>
+          <span className="text-slate-600">→</span>
+          <Link href="/applications" className="text-slate-300 hover:underline">8. Job Tracker</Link>
+        </div>
+        <Link href="/profile" className="text-[11px] text-blue-400 hover:underline font-semibold shrink-0 ml-4">
+          Edit Profile →
+        </Link>
+      </div>
+
       {/* 4 Key Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         {/* Metric 1: Match Score */}

@@ -1,3 +1,17 @@
+export interface UserProfile {
+  id: string;
+  name: string;
+  email: string;
+  current_title: string;
+  years_of_experience: number;
+  target_role_id?: string;
+  target_role_title?: string;
+  education?: string;
+  current_skills: string[];
+  bio?: string;
+  created_at?: string;
+}
+
 export interface JobRole {
   id: string;
   title: string;

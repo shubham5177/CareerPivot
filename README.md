@@ -105,36 +105,53 @@ Open `http://localhost:3000` in your web browser.
 
 ---
 
-## 5. Main Features & Workflows
+## 5. Complete User Journey & Working Workflow
 
-1. **Resume Analyzer (`/resume`):**
+The platform provides an end-to-end guided career development journey:
+
+```
+Registration & Profile → Resume Upload & Analysis → Career Selection → Skill Gap Matrix → Learning Roadmap → Portfolio Projects → Mock Interview → Job Tracking → Progress Dashboard → Updated Recommendations
+```
+
+1. **User Registration & Profile Creation (`/profile`):**
+   - User creates an account by entering their name, email, education, current skills, years of experience, and career interests.
+   - Synchronized to SQLite database and establishes baseline profile metrics.
+
+2. **Resume Upload & Analysis (`/resume`):**
    - Upload PDF, DOCX, or paste text.
-   - Parses education, work history, projects, and extracts skills using Model 1.
+   - Parses education, work history, projects, and extracts skills using Model 1 (`skill_classifier_pipeline.joblib`) across 8 domains.
    - Allows manual skill additions and deletions with real-time category updates.
 
-2. **Career Selection (`/career`):**
-   - 9 built-in high-demand tech pathways + custom job role builder.
+3. **Target Career Selection (`/career`):**
+   - 9 built-in high-demand tech pathways (Frontend, Backend, Full Stack, Data Science, ML Engineer, Cloud, Security, etc.) + custom job role builder.
    - Real-time salary ranges, demand ratings, and core skill requirements.
 
-3. **Skill Gap Matrix (`/skill-gap`):**
-   - Model 2 matching engine compares candidate profile against job specifications.
+4. **AI-Powered Skill Gap Analysis (`/skill-gap`):**
+   - Model 2 TF-IDF Cosine Similarity engine compares candidate profile against job specifications.
+   - Calculates match score ($0-100\%$) and skill gap percentage.
    - Interactive Recharts Radar Chart visualizing domain balances.
-   - Prioritized missing skill gaps (Essential, Important, Nice-to-have).
+   - Prioritized missing skill gaps (Essential, Important, Nice-to-have) with action steps.
 
-4. **Learning Roadmap (`/roadmap`):**
+5. **Personalized Learning Roadmap (`/roadmap`):**
    - 8-week structured transition curriculum.
-   - Tasks, practice activities, project deliverables, and resource links.
+   - Weekly tasks, practice activities, project deliverables, and resource links.
    - Checkbox tracking with automated progress recalculation.
 
-5. **Portfolio Projects (`/projects`):**
+6. **Portfolio Project Recommendations (`/projects`):**
    - Curated architectural projects targeting specific skill gaps.
-   - Filter by pathway and difficulty (Beginner, Intermediate, Advanced).
+   - Filter by pathway and difficulty (Beginner, Intermediate, Advanced) with full technical specifications.
 
-6. **Mock Interview Arena (`/interview`):**
+7. **AI-Powered Mock Interview (`/interview`):**
    - Select target role and difficulty (Junior, Mid-level, Senior).
    - Type structured answers; evaluated honestly by Model 3 without fake biometric claims.
-   - Displays sub-scores, concept coverage, and targeted improvement suggestions.
+   - Displays sub-scores (Relevance, Coverage, Structure), concept coverage tags, and targeted improvement suggestions.
 
-7. **Job Application Tracker (`/applications`):**
-   - Manage application pipelines (Wishlist, Applied, Screening, Technical, Final, Offer).
+8. **Job Application Tracker (`/applications`):**
+   - Manage application pipelines (Wishlist, Applied, Screening, Technical Interview, Final Round, Offer, Rejected).
    - Real funnel conversion analytics (Interview rate, offer rate, timeline).
+
+9. **Personalized Dashboard (`/dashboard`):**
+   - Unified overview of match score gauge, skills verified vs gaps, roadmap completion, interview average, application funnel, and prioritized next steps.
+
+10. **Updated Recommendations & Iterative Feedback:**
+    - As the user completes roadmap milestones, finishes projects, and passes mock interviews, recommendation weights automatically adjust toward job application readiness.

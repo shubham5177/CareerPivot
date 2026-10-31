@@ -6,6 +6,29 @@ from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field
 
 # User & Role Schemas
+class UserProfileCreate(BaseModel):
+    name: str
+    email: str
+    current_title: Optional[str] = "Student / Career Pivot Aspirant"
+    years_of_experience: float = 0.0
+    target_role_id: Optional[str] = "role-fullstack"
+    education: Optional[str] = None
+    current_skills: Optional[List[str]] = []
+    bio: Optional[str] = None
+
+class UserProfileResponse(BaseModel):
+    id: str
+    name: str
+    email: str
+    current_title: str
+    years_of_experience: float
+    target_role_id: Optional[str] = None
+    target_role_title: Optional[str] = None
+    education: Optional[str] = None
+    current_skills: List[str] = []
+    bio: Optional[str] = None
+    created_at: Optional[str] = None
+
 class JobRoleSchema(BaseModel):
     id: str
     title: str

@@ -18,6 +18,7 @@ from fastapi.responses import JSONResponse
 
 # Local imports
 from .schemas import (
+    UserProfileCreate, UserProfileResponse,
     JobRoleSchema, CustomJobRoleRequest, ExtractedSkill, ResumeParseResponse,
     ResumeSaveRequest, JobMatchRequest, JobMatchResponse, LearningRoadmapResponse,
     RoadmapTaskSchema, TaskToggleRequest, PortfolioProjectSchema,
@@ -105,6 +106,121 @@ def health_check():
         },
         "database": os.path.exists(DB_PATH)
     }
+
+# -------------------------------------------------------------------------
+# User Registration & Profile Endpoints
+# -------------------------------------------------------------------------
+@app.get("/api/users/profile", response_model=UserProfileResponse)
+def get_user_profile(user_id: str = "usr-demo-01", db: sqlite3.Connection = Depends(get_db)):
+    cursor = db.cursor()
+    cursor.execute("""
+        SELECT u.id, u.name, u.email, u.current_title, u.years_of_experience, u.target_role_id, u.bio, u.created_at,
+               r.title as target_role_title
+        FROM users u
+        LEFT JOIN job_roles r ON u.target_role_id = r.id
+        WHERE u.id = ?;
+    """, (user_id,))
+    row = cursor.fetchone()
+    if not row:
+        # Create a default profile if not exists
+        return UserProfileResponse(
+            id=user_id,
+            name="Alex Rivera",
+            email="alex.rivera@example.com",
+            current_title="Junior Software Developer",
+            years_of_experience=1.5,
+            target_role_id="role-fullstack",
+            target_role_title="Full Stack Developer",
+            education="B.S. in Computer Science",
+            current_skills=["JavaScript", "React", "HTML5 & CSS3", "Tailwind CSS", "RESTful APIs", "SQL"],
+            bio="Passionate junior developer transitioning into full-stack web engineering."
+        )
+
+    # Fetch skills from latest resume
+    cursor.execute("""
+        SELECT extracted_skills_json, education_json FROM resumes
+        WHERE user_id = ? ORDER BY parsed_at DESC LIMIT 1;
+    """, (user_id,))
+    res_row = cursor.fetchone()
+    current_skills = []
+    edu_str = ""
+    if res_row:
+        if res_row["extracted_skills_json"]:
+            try:
+                current_skills = json.loads(res_row["extracted_skills_json"])
+            except Exception:
+                pass
+        if res_row["education_json"]:
+            try:
+                edu_arr = json.loads(res_row["education_json"])
+                if edu_arr:
+                    edu_str = edu_arr[0].get("degree", "")
+            except Exception:
+                pass
+
+    return UserProfileResponse(
+        id=row["id"],
+        name=row["name"],
+        email=row["email"],
+        current_title=row["current_title"] or "Aspiring Developer",
+        years_of_experience=row["years_of_experience"] or 0.0,
+        target_role_id=row["target_role_id"],
+        target_role_title=row["target_role_title"] or "Full Stack Developer",
+        education=edu_str or "Computer Science / STEM",
+        current_skills=current_skills if current_skills else ["JavaScript", "React", "SQL"],
+        bio=row["bio"] or "",
+        created_at=row["created_at"]
+    )
+
+@app.post("/api/users/profile", response_model=UserProfileResponse)
+def create_or_update_profile(req: UserProfileCreate, user_id: str = "usr-demo-01", db: sqlite3.Connection = Depends(get_db)):
+    cursor = db.cursor()
+    cursor.execute("SELECT id FROM users WHERE id = ?", (user_id,))
+    exists = cursor.fetchone()
+
+    if exists:
+        cursor.execute("""
+            UPDATE users
+            SET name = ?, email = ?, current_title = ?, years_of_experience = ?, target_role_id = ?, bio = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?;
+        """, (req.name, req.email, req.current_title, req.years_of_experience, req.target_role_id, req.bio, user_id))
+    else:
+        cursor.execute("""
+            INSERT INTO users (id, name, email, current_title, years_of_experience, target_role_id, bio)
+            VALUES (?, ?, ?, ?, ?, ?, ?);
+        """, (user_id, req.name, req.email, req.current_title, req.years_of_experience, req.target_role_id, req.bio))
+
+    # Also sync resume skills and education if provided
+    if req.current_skills or req.education:
+        edu_list = [{"degree": req.education, "institution": "Self-Directed / University", "year": "Recent"}] if req.education else []
+        cursor.execute("""
+            SELECT id FROM resumes WHERE user_id = ? ORDER BY parsed_at DESC LIMIT 1;
+        """, (user_id,))
+        res_exists = cursor.fetchone()
+        if res_exists:
+            cursor.execute("""
+                UPDATE resumes
+                SET extracted_skills_json = ?, education_json = ?
+                WHERE id = ?;
+            """, (json.dumps(req.current_skills or []), json.dumps(edu_list), res_exists[0]))
+        else:
+            res_id = f"res-{uuid.uuid4().hex[:8]}"
+            cursor.execute("""
+                INSERT INTO resumes (id, user_id, filename, file_type, raw_text, clean_text, education_json, experience_json, projects_json, extracted_skills_json)
+                VALUES (?, ?, 'profile_resume.txt', 'text', 'Profile Created Resume', 'Profile Created Resume', ?, '[]', '[]', ?);
+            """, (res_id, user_id, json.dumps(edu_list), json.dumps(req.current_skills or [])))
+
+    db.commit()
+
+    # Return updated profile
+    return get_user_profile(user_id=user_id, db=db)
+
+@app.put("/api/users/target-role")
+def update_target_role(role_id: str, user_id: str = "usr-demo-01", db: sqlite3.Connection = Depends(get_db)):
+    cursor = db.cursor()
+    cursor.execute("UPDATE users SET target_role_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?;", (role_id, user_id))
+    db.commit()
+    return {"status": "updated", "target_role_id": role_id}
 
 # -------------------------------------------------------------------------
 # Job Roles Endpoints
